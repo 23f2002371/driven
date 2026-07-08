@@ -51,9 +51,10 @@ Once the downloading stops and you can type in the terminal again, it's time to 
 
 
 2. After a second or two, you will see a message pop up in the terminal that looks something like this:
+   
 ```➜  Local:   http://localhost:5173/```
 
-3. Hold down the ```Ctrl``` key (Windows) or ```Cmd ⌘``` key (Mac) and visit [http://localhost:5173](http://localhost:5173).
+4. Hold down the ```Ctrl``` key (Windows) or ```Cmd ⌘``` key (Mac) and visit [http://localhost:5173](http://localhost:5173).
 
 ### 🎉 Congratulations! Your web browser will open, and you should now see the Student Club website running live on your computer!
 
