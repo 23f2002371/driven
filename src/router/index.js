@@ -1,16 +1,65 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import ClubAdminDashboard from '../views/ClubAdminDashboard.vue'
-import StudentDashboard from '../views/StudentDashboard.vue'
-import LabAdminDashboard from '../views/LabAdminDashboard.vue'
+import EventDetailsView from '../components/EventDetailsView.vue'
+import ClubAdminView from '../components/ClubAdminView.vue'
+import StudentView from '../components/StudentView.vue'
+import LabAdminView from '../components/LabAdminView.vue'
+import HomeView from '../components/HomeView.vue'
+import { store } from '../store/mockData'
+
+const routes = [
+  {
+    path: '/',
+    redirect: () => {
+      const map = {
+        home: '/home',
+        club_admin: '/clubAdmin-dashboard',
+        student: '/student-dashboard',
+        lab_admin: '/labAdmin-dashboard'
+      }
+      return map[store.currentUserRole] || '/home'
+    }
+  },
+  {
+    path: '/home',
+    name: 'home',
+    component: HomeView,
+    beforeEnter: () => { store.currentUserRole = 'home'; }
+  },
+  {
+    path: '/clubAdmin-dashboard',
+    name: 'club-admin',
+    component: ClubAdminView,
+    beforeEnter: () => { store.currentUserRole = 'club_admin'; }
+  },
+  {
+    path: '/student-dashboard',
+    name: 'student',
+    component: StudentView,
+    beforeEnter: () => { store.currentUserRole = 'student'; }
+  },
+  {
+    path: '/labAdmin-dashboard',
+    name: 'lab-admin',
+    component: LabAdminView,
+    beforeEnter: () => { store.currentUserRole = 'lab_admin'; }
+  },
+  {
+    path: '/event/:eventName',
+    name: 'event-details',
+    component: EventDetailsView
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
+  }
+]
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [
-    { path: '/', name: 'home', component: HomeView },
-    { path: '/club-admin', name: 'club-admin', component: ClubAdminDashboard },
-    { path: '/student', name: 'student', component: StudentDashboard },
-    { path: '/lab-admin', name: 'lab-admin', component: LabAdminDashboard }
-  ]
+  history: createWebHistory(),
+  routes,
+  scrollBehavior() {
+    return { top: 0 }
+  }
 })
+
 export default router
