@@ -1,0 +1,2 @@
+# Database migration versions live here.
+# Generate with: uv run alembic revision --autogenerate -m "message"
