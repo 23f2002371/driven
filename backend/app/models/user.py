@@ -36,7 +36,8 @@ class User(Base):
         unique=True,
         index=True,
     )
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Nullable: OAuth-only users (Google/GitHub) have no password.
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     role: Mapped[UserRole] = mapped_column(
         Enum(
             UserRole,

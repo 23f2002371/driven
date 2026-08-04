@@ -30,6 +30,32 @@ uv run uvicorn app.main:app --reload
 - API docs: http://localhost:8000/docs
 - Health check: http://localhost:8000/api/health
 
+## Testing
+
+Install dependencies before running tests:
+
+```bash
+uv sync
+```
+
+Run the full test suite:
+
+```bash
+uv run pytest
+```
+
+Run tests with verbose output:
+
+```bash
+uv run pytest -v
+```
+
+Run a specific test file:
+
+```bash
+uv run pytest path/to/test_file.py
+```
+
 ## Database Migrations
 
 ```bash
