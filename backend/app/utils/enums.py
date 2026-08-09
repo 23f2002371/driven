@@ -77,6 +77,15 @@ class WinnerPosition(str, Enum):
     THIRD = "third"
 
 
+class CertificateType(str, Enum):
+    """Kind of certificate issued for an event registration."""
+
+    PARTICIPATION = "participation"
+    FIRST = "first"
+    SECOND = "second"
+    THIRD = "third"
+
+
 class Department(str, Enum):
     """Academic department of a student."""
 
@@ -93,23 +102,166 @@ class Department(str, Enum):
     OTHER = "other"
 
 
-class Skill(str, Enum):
-    """A skill a student can declare."""
+class DomainEnum(str, Enum):
+    """A skill domain a student can declare."""
 
-    WEB_DEVELOPMENT = "web_development"
-    APP_DEVELOPMENT = "app_development"
-    AI_ML = "ai_ml"
-    DATA_SCIENCE = "data_science"
-    CYBER_SECURITY = "cyber_security"
-    CLOUD_COMPUTING = "cloud_computing"
-    DEVOPS = "devops"
-    UI_UX_DESIGN = "ui_ux_design"
-    ROBOTICS = "robotics"
-    IOT = "iot"
-    COMPETITIVE_PROGRAMMING = "competitive_programming"
-    BLOCKCHAIN = "blockchain"
-    GAME_DEVELOPMENT = "game_development"
-    OTHER = "other"
+    PROGRAMMING_LANGUAGES = "PROGRAMMING_LANGUAGES"
+    WEB_DEVELOPMENT = "WEB_DEVELOPMENT"
+    BACKEND_DEVELOPMENT = "BACKEND_DEVELOPMENT"
+    APP_DEVELOPMENT = "APP_DEVELOPMENT"
+    AI_ML = "AI_ML"
+    DATA_SCIENCE = "DATA_SCIENCE"
+    CYBER_SECURITY = "CYBER_SECURITY"
+    CLOUD_COMPUTING = "CLOUD_COMPUTING"
+    DEVOPS = "DEVOPS"
+    DATABASE = "DATABASE"
+    UI_UX_DESIGN = "UI_UX_DESIGN"
+    ROBOTICS = "ROBOTICS"
+    IOT = "IOT"
+    BLOCKCHAIN = "BLOCKCHAIN"
+    GAME_DEVELOPMENT = "GAME_DEVELOPMENT"
+    COMPETITIVE_PROGRAMMING = "COMPETITIVE_PROGRAMMING"
+
+
+class TechnologyEnum(str, Enum):
+    """A technology a student can declare within a domain."""
+
+    # Programming Languages
+    PYTHON = "PYTHON"
+    JAVA = "JAVA"
+    C = "C"
+    CPP = "CPP"
+    C_SHARP = "C_SHARP"
+    JAVASCRIPT = "JAVASCRIPT"
+    TYPESCRIPT = "TYPESCRIPT"
+    GO = "GO"
+    RUST = "RUST"
+    PHP = "PHP"
+    KOTLIN = "KOTLIN"
+    SWIFT = "SWIFT"
+    DART = "DART"
+    R = "R"
+
+    # Web Development
+    HTML = "HTML"
+    CSS = "CSS"
+    TAILWIND_CSS = "TAILWIND_CSS"
+    BOOTSTRAP = "BOOTSTRAP"
+    REACT = "REACT"
+    NEXT_JS = "NEXT_JS"
+    VUE_JS = "VUE_JS"
+    NUXT_JS = "NUXT_JS"
+    ANGULAR = "ANGULAR"
+    SVELTE = "SVELTE"
+
+    # Backend Development
+    NODE_JS = "NODE_JS"
+    EXPRESS_JS = "EXPRESS_JS"
+    FASTAPI = "FASTAPI"
+    FLASK = "FLASK"
+    DJANGO = "DJANGO"
+    SPRING_BOOT = "SPRING_BOOT"
+    NEST_JS = "NEST_JS"
+    LARAVEL = "LARAVEL"
+    ASP_NET = "ASP_NET"
+    GRAPHQL = "GRAPHQL"
+    REST_API = "REST_API"
+
+    # App Development
+    FLUTTER = "FLUTTER"
+    REACT_NATIVE = "REACT_NATIVE"
+    ANDROID = "ANDROID"
+    JETPACK_COMPOSE = "JETPACK_COMPOSE"
+    SWIFT_UI = "SWIFT_UI"
+
+    # AI / ML
+    NUMPY = "NUMPY"
+    PANDAS = "PANDAS"
+    SCIKIT_LEARN = "SCIKIT_LEARN"
+    TENSORFLOW = "TENSORFLOW"
+    PYTORCH = "PYTORCH"
+    KERAS = "KERAS"
+    OPENCV = "OPENCV"
+    LANGCHAIN = "LANGCHAIN"
+    HUGGING_FACE = "HUGGING_FACE"
+    OPENAI_API = "OPENAI_API"
+
+    # Data Science
+    MATPLOTLIB = "MATPLOTLIB"
+    SEABORN = "SEABORN"
+    POWER_BI = "POWER_BI"
+    TABLEAU = "TABLEAU"
+    JUPYTER = "JUPYTER"
+
+    # Cyber Security
+    KALI_LINUX = "KALI_LINUX"
+    WIRESHARK = "WIRESHARK"
+    BURP_SUITE = "BURP_SUITE"
+    NMAP = "NMAP"
+    METASPLOIT = "METASPLOIT"
+    OWASP = "OWASP"
+
+    # Cloud Computing
+    AWS = "AWS"
+    AZURE = "AZURE"
+    GOOGLE_CLOUD = "GOOGLE_CLOUD"
+    FIREBASE = "FIREBASE"
+    SUPABASE = "SUPABASE"
+
+    # DevOps
+    DOCKER = "DOCKER"
+    KUBERNETES = "KUBERNETES"
+    JENKINS = "JENKINS"
+    GITHUB_ACTIONS = "GITHUB_ACTIONS"
+    TERRAFORM = "TERRAFORM"
+    ANSIBLE = "ANSIBLE"
+    NGINX = "NGINX"
+    LINUX = "LINUX"
+
+    # Database
+    POSTGRESQL = "POSTGRESQL"
+    MYSQL = "MYSQL"
+    SQLITE = "SQLITE"
+    MONGODB = "MONGODB"
+    REDIS = "REDIS"
+    ORACLE = "ORACLE"
+    SQL_SERVER = "SQL_SERVER"
+
+    # UI / UX
+    FIGMA = "FIGMA"
+    ADOBE_XD = "ADOBE_XD"
+    CANVA = "CANVA"
+    PHOTOSHOP = "PHOTOSHOP"
+    ILLUSTRATOR = "ILLUSTRATOR"
+
+    # Robotics
+    ROS = "ROS"
+    ARDUINO = "ARDUINO"
+    RASPBERRY_PI = "RASPBERRY_PI"
+
+    # IoT
+    ESP32 = "ESP32"
+    MQTT = "MQTT"
+
+    # Blockchain
+    SOLIDITY = "SOLIDITY"
+    HARDHAT = "HARDHAT"
+    FOUNDRY = "FOUNDRY"
+    ETHERS_JS = "ETHERS_JS"
+    WEB3_JS = "WEB3_JS"
+
+    # Game Development
+    UNITY = "UNITY"
+    UNREAL_ENGINE = "UNREAL_ENGINE"
+    GODOT = "GODOT"
+    BLENDER = "BLENDER"
+
+    # Competitive Programming
+    CODEFORCES = "CODEFORCES"
+    CODECHEF = "CODECHEF"
+    LEETCODE = "LEETCODE"
+    ATCODER = "ATCODER"
+    HACKERRANK = "HACKERRANK"
 
 
 class EventVenue(str, Enum):

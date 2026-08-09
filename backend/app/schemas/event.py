@@ -5,11 +5,14 @@ from __future__ import annotations
 from datetime import date, datetime, time
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
+from app.schemas.student import DomainItem
 from app.utils.enums import (
     AdditionalInfoType,
     AttendanceStatus,
+    CertificateType,
+    Department,
     EventCategory,
     EventStatus,
     EventVenue,
@@ -17,8 +20,6 @@ from app.utils.enums import (
     WinnerPosition,
 )
 
-
-# ------------------------------------------------- Nested child items
 class AgendaItem(BaseModel):
     """A single time-boxed agenda entry embedded in an event payload."""
 
@@ -140,28 +141,76 @@ class PrivateEventResponse(BaseModel):
 
 
 # ---------------------------------------------------------- Registration
+class StudentProfile(BaseModel):
+    """Student information submitted via the registration form."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str
+    email: EmailStr
+    student_id: str
+    department: Department
+    phone: str | None
+    github: str | None
+    linkedin: str | None
+    portfolio: str | None
+    domains: list[DomainItem] = []
+
+
 class EventRegistrationCreate(BaseModel):
-    """Payload to register a student for an event."""
+    """Payload to register a student for an event.
+
+    The frontend submits the student's profile information together with the
+    event being registered for. ``student_id`` here is the student's college ID
+    (a string); the API resolves it to a ``Student`` record and stores the
+    Student UUID on the registration - never the raw string.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
+    name: str = Field(min_length=1, max_length=100)
+    student_id: str = Field(min_length=1, max_length=20)
+    email: EmailStr = Field(max_length=150)
+    phone: str = Field(min_length=1, max_length=20)
+    department: str = Field(min_length=1)
+    github: str | None = Field(default=None, max_length=100)
+    linkedin: str | None = Field(default=None, max_length=100)
+    portfolio: str | None = Field(default=None, max_length=255)
     event_id: UUID
-    student_id: UUID
     team_name: str = Field(min_length=1, max_length=150)
-    qr_code_url: str | None = None
+    domains: list[DomainItem] = []
+
+    @field_validator("department")
+    @classmethod
+    def validate_department(cls, value: str) -> str:
+        try:
+            Department(value)
+        except ValueError as exc:
+            raise ValueError("Invalid department") from exc
+        return value
 
 
 class EventRegistrationUpdate(BaseModel):
-    """Payload to update a registration. Every field is optional."""
+    """Payload to update a registration. Every field is optional.
+
+    Only student-editable fields are accepted: ``team_name`` plus the student's
+    profile fields. Protected fields (``event_id``, ``student_id``,
+    ``registration_status``, ``attendance_status``) are rejected via
+    ``extra="forbid"`` (422) rather than silently ignored.
+    """
+
+    model_config = ConfigDict(extra="forbid")
 
     team_name: str | None = Field(default=None, min_length=1, max_length=150)
-    qr_code_url: str | None = None
-    registration_status: RegistrationStatus | None = None
-    attendance_status: AttendanceStatus | None = None
+    github: str | None = Field(default=None, max_length=100)
+    linkedin: str | None = Field(default=None, max_length=100)
+    portfolio: str | None = Field(default=None, max_length=255)
+    domains: list[DomainItem] | None = None
 
 
 class EventRegistrationResponse(BaseModel):
-    """Public representation of an event registration."""
+    """Representation of an event registration including the submitted
+    student information and the administrative statuses."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -172,11 +221,12 @@ class EventRegistrationResponse(BaseModel):
     qr_code_url: str | None
     registration_status: RegistrationStatus
     attendance_status: AttendanceStatus
+    student: StudentProfile
 
 
 # -------------------------------------------------------------- Winner
 class EventWinnerCreate(BaseModel):
-    """Payload to create an event winner."""
+    """Payload to declare an event winner."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -184,13 +234,7 @@ class EventWinnerCreate(BaseModel):
     registration_id: UUID
     position: WinnerPosition
     project_name: str = Field(min_length=1, max_length=200)
-
-
-class EventWinnerUpdate(BaseModel):
-    """Payload to update an event winner. Every field is optional."""
-
-    position: WinnerPosition | None = None
-    project_name: str | None = Field(default=None, min_length=1, max_length=200)
+    project_url: str | None = None
 
 
 class EventWinnerResponse(BaseModel):
@@ -203,3 +247,26 @@ class EventWinnerResponse(BaseModel):
     registration_id: UUID
     position: WinnerPosition
     project_name: str
+    project_url: str | None
+
+
+# --------------------------------------------------------- Certificate
+class CertificateResponse(BaseModel):
+    """Representation of an issued certificate.
+
+    ``event_name`` and ``student_name`` are resolved from the related event and
+    student and are therefore built by a helper rather than loaded directly
+    from the certificate row.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    event_id: UUID
+    student_id: UUID
+    registration_id: UUID
+    certificate_type: CertificateType
+    issue_date: date
+    certificate_url: str | None
+    event_name: str
+    student_name: str
