@@ -30,6 +30,7 @@ from app.core.database import Base
 from app.utils.enums import (
     AdditionalInfoType,
     AttendanceStatus,
+    CertificateType,
     EventCategory,
     EventStatus,
     EventVenue,
@@ -39,6 +40,7 @@ from app.utils.enums import (
 
 if TYPE_CHECKING:
     from app.models.student import Student
+
 
 
 class Event(Base):
@@ -123,6 +125,12 @@ class Event(Base):
         back_populates="event",
         cascade="all, delete-orphan",
     )
+    certificates: Mapped[list[Certificate]] = relationship(
+        "Certificate",
+        back_populates="event",
+        cascade="all, delete-orphan",
+    )
+
 
     def __repr__(self) -> str:
         return f"<Event id={self.id} name={self.name!r} status={self.status}>"
@@ -267,6 +275,11 @@ class EventRegistration(Base):
         back_populates="registration",
         uselist=False,
     )
+    certificate: Mapped[Certificate | None] = relationship(
+        "Certificate",
+        back_populates="registration",
+        uselist=False,
+    )
 
     def __repr__(self) -> str:
         return (
@@ -324,4 +337,62 @@ class EventWinner(Base):
         return (
             f"<EventWinner id={self.id} event_id={self.event_id} "
             f"position={self.position}>"
+        )
+
+
+class Certificate(Base):
+    """A certificate issued for an event registration."""
+
+    __tablename__ = "certificates"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    event_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("events.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    student_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("students.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    registration_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("event_registrations.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    certificate_type: Mapped[CertificateType] = mapped_column(
+        Enum(
+            CertificateType,
+            name="certificate_type",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=False,
+    )
+    issue_date: Mapped[date] = mapped_column(Date, nullable=False)
+    certificate_url: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    event: Mapped[Event] = relationship("Event", back_populates="certificates")
+    student: Mapped[Student] = relationship("Student", back_populates="certificates")
+    registration: Mapped[EventRegistration] = relationship(
+        "EventRegistration",
+        back_populates="certificate",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<Certificate id={self.id} event_id={self.event_id} "
+            f"certificate_type={self.certificate_type}>"
         )

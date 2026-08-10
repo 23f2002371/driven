@@ -11,7 +11,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.utils.enums import Department, Skill
+from app.utils.enums import Department, DomainEnum, TechnologyEnum
 
 
 class StudentCreate(BaseModel):
@@ -19,8 +19,8 @@ class StudentCreate(BaseModel):
     student_id: str = Field(min_length=1, max_length=20)
     department: Department
     phone: str | None = Field(default=None, max_length=20)
-    github_username: str | None = Field(default=None, max_length=100)
-    linkedin_username: str | None = Field(default=None, max_length=100)
+    github_url: str | None = Field(default=None, max_length=100)
+    linkedin_url: str | None = Field(default=None, max_length=100)
     portfolio_url: str | None = Field(default=None, max_length=255)
 
 
@@ -29,8 +29,8 @@ class StudentUpdate(BaseModel):
     student_id: str | None = Field(default=None, min_length=1, max_length=20)
     department: Department | None = None
     phone: str | None = Field(default=None, max_length=20)
-    github_username: str | None = Field(default=None, max_length=100)
-    linkedin_username: str | None = Field(default=None, max_length=100)
+    github_url: str | None = Field(default=None, max_length=100)
+    linkedin_url: str | None = Field(default=None, max_length=100)
     portfolio_url: str | None = Field(default=None, max_length=255)
 
 
@@ -45,28 +45,26 @@ class StudentResponse(BaseModel):
     user_email: str
     department: Department
     phone: str | None
-    github_username: str | None
-    linkedin_username: str | None
+    github_url: str | None
+    linkedin_url: str | None
     portfolio_url: str | None
-    skills: list[StudentSkillResponse] = []
+    domains: list[DomainItem] = []
     created_at: datetime
     updated_at: datetime
 
 
-class StudentSkillCreate(BaseModel):
-
-    skill: Skill
-
-
-class StudentSkillUpdate(BaseModel):
-
-    skill: Skill | None = None
-
-
-class StudentSkillResponse(BaseModel):
+class TechnologyItem(BaseModel):
+    """A single technology selected under a domain."""
 
     model_config = ConfigDict(from_attributes=True)
 
-    id: UUID
-    student_id: UUID
-    skill: Skill
+    technology: TechnologyEnum
+
+
+class DomainItem(BaseModel):
+    """A skill domain together with its selected technologies."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    domain: DomainEnum
+    technologies: list[TechnologyItem] = []
