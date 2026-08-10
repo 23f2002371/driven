@@ -1,0 +1,822 @@
+[
+  {
+    "test": "tests/integration/test_auth.py::test_register_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_duplicate_email",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_invalid_email",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_missing_required_field",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_short_password",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_wrong_password",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_unknown_email",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_oauth_only_user",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_missing_credentials",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_missing_credentials_variants[payload0]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_missing_credentials_variants[payload1]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_missing_credentials_variants[payload2]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_empty_full_name",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_whitespace_only_full_name",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_full_name_not_trimmed",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_email_normalized_whitespace",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_duplicate_email_different_case",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_password_boundary_lengths[12345678]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_password_boundary_lengths[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_password_over_max_length",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_whitespace_only_password",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_full_name_over_max_length",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_email_over_max_length",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_password_at_bcrypt_limit_roundtrips",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_role_smuggling_rejected[extra0]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_role_smuggling_rejected[extra1]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_role_smuggling_rejected[extra2]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_role_smuggling_rejected[extra3]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_malformed_json",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_wrong_content_type",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_sql_injection_safe",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_xss_payload_stored_literal",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_unicode_and_emoji_full_name",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_null_field_values[payload0]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_null_field_values[payload1]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_null_field_values[payload2]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_invalid_http_method[GET]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_invalid_http_method[PUT]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_invalid_http_method[PATCH]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_invalid_http_method[DELETE]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_register_concurrent_duplicate",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_empty_password",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_whitespace_password",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_null_credentials",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_email_whitespace_normalized",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_email_case_insensitive",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_malformed_json",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_wrong_content_type",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_sql_injection",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_xss_in_password",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_very_long_password",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_extra_field_rejected",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_unicode_password_roundtrip",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_invalid_http_method[GET]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_invalid_http_method[PUT]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_invalid_http_method[PATCH]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_login_invalid_http_method[DELETE]",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_me_missing_auth_header",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_me_malformed_auth_header",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_me_random_garbage_token",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_me_expired_token",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_me_tampered_token",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_me_token_signed_with_wrong_secret",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_auth.py::test_me_token_for_deleted_user",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_create_event_as_club_admin",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_create_event_as_student_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_create_event_invalid_payload",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_create_event_missing_required_field",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_create_event_unauthenticated",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_event_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_event_invalid_uuid",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_event_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_event_response_body",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_event_winner_fields_null_when_no_winners",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_event_does_not_expose_private_fields",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_create_registration_uses_submitted_student_profile",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_create_registration_syncs_profile_to_student",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_create_registration_creates_student_for_user",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_create_registration_event_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_registration_keeps_existing_details_and_appends_domains",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_create_registration_duplicate_conflict",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_create_registration_invalid_department",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_create_registration_rejects_unexpected_field",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_create_registration_as_club_admin_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_update_registration_updates_editable_fields",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_update_registration_rejects_protected_fields",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_update_other_students_registration_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_registration_returns_embedded_student_profile",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_other_students_registration_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_registration_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_upsert_winners_creates_all_positions",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_upsert_winners_updates_only_supplied_positions",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_upsert_winners_reassigns_position_registration",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_upsert_winners_event_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_upsert_winners_registration_not_in_event",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_upsert_winners_student_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_upsert_winners_unauthenticated",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_declare_winner_for_registration_of_event",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_event_winners_returns_all_positions",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_event_winners_empty_when_none",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_event_winners_event_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_generate_certificates_for_event",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_generate_certificates_skips_existing",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_generate_certificates_event_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_generate_certificates_no_registrations",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_generate_certificates_as_student_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_generate_certificates_unauthenticated",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_student_certificates",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_student_certificates_empty",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_student_certificates_student_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_get_student_certificates_as_admin_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_create_equipment_duplicate_request",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_create_equipment_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_create_equipment_invalid_available_exceeds_total",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_create_equipment_total_quantity_validation",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_create_equipment_empty_name",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_create_equipment_rejects_extra_field",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_create_equipment_student_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_create_equipment_unauthenticated",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_increase_equipment_stock_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_increase_equipment_stock_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_increase_equipment_stock_zero_increment",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_increase_equipment_stock_student_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_increase_equipment_stock_unauthenticated",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_borrow_equipment_new_borrow_created",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_borrow_equipment_existing_borrow_updated",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_borrow_equipment_exceeds_available_stock",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_borrow_equipment_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_borrow_equipment_zero_quantity",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_borrow_equipment_admin_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_borrow_equipment_unauthenticated",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_delete_borrow_detail_restores_stock",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_delete_borrow_detail_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_delete_borrow_detail_student_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_inventory.py::test_delete_borrow_detail_unauthenticated",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_create_discussion_thread_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_create_discussion_thread_duplicate_conflict",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_create_discussion_thread_event_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_create_discussion_thread_student_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_create_discussion_thread_unauthenticated",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_get_discussion_thread_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_get_discussion_thread_requires_auth",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_get_discussion_thread_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_create_message_top_level_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_create_message_student_reply",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_create_message_thread_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_create_message_parent_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_create_message_unauthenticated",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_update_message_owner_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_update_message_other_student_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_update_message_club_admin_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_update_message_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_delete_message_owner_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_delete_message_other_student_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_delete_message_unauthenticated",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_get_messages_nested_tree",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_get_messages_deleted_message_keeps_replies",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_support_desk.py::test_get_messages_thread_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/unit/core/test_security.py::test_get_password_hash_differs_from_plaintext",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/unit/core/test_security.py::test_verify_password_correct",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/unit/core/test_security.py::test_verify_password_wrong",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/unit/core/test_security.py::test_create_access_token_returns_jwt",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/unit/core/test_security.py::test_decode_access_token_returns_original_subject",
+    "outcome": "passed",
+    "error": null
+  }
+]
