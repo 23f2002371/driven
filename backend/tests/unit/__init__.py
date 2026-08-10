@@ -1,0 +1,1 @@
+"""Isolated unit tests that do not require a database or HTTP client."""
