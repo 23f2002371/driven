@@ -19,6 +19,9 @@ from app.utils.enums import Department
 if TYPE_CHECKING:
     from app.models.domain import StudentDomain
     from app.models.event import Certificate, EventRegistration
+    from app.models.inventory import (
+        BorrowDetail,  #has to push Anshul-----------------------------------------------------
+    )
     from app.models.user import User
 
 
@@ -84,6 +87,11 @@ class Student(Base):
     )
     certificates: Mapped[list[Certificate]] = relationship(
         "Certificate",
+        back_populates="student",
+        cascade="all, delete-orphan",
+    )
+    borrow_details: Mapped[list[BorrowDetail]] = relationship(
+        "BorrowDetail",
         back_populates="student",
         cascade="all, delete-orphan",
     )
