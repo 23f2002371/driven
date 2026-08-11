@@ -11,6 +11,7 @@ import uuid
 from datetime import date, datetime, time
 from typing import TYPE_CHECKING
 
+
 from sqlalchemy import (
     Date,
     DateTime,
@@ -38,8 +39,10 @@ from app.utils.enums import (
     WinnerPosition,
 )
 
+
 if TYPE_CHECKING:
     from app.models.student import Student
+    from backend.app.models.support_desk import DiscussionThread
 
 
 
@@ -129,6 +132,12 @@ class Event(Base):
         "Certificate",
         back_populates="event",
         cascade="all, delete-orphan",
+    )
+    discussion_thread: Mapped[DiscussionThread | None] = relationship(
+        "DiscussionThread",
+        back_populates="event",
+        cascade="all, delete-orphan",
+        uselist=False,
     )
 
 
