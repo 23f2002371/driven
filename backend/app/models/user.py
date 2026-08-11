@@ -16,8 +16,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 from app.utils.enums import UserRole
 
+
 if TYPE_CHECKING:
     from app.models.student import Student
+    from backend.app.models.support_desk import DiscussionMessage, DiscussionThread
 
 
 class User(Base):
@@ -65,6 +67,15 @@ class User(Base):
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan",
+    )
+
+    discussion_threads_created: Mapped[list[DiscussionThread]] = relationship(
+        "DiscussionThread",
+        back_populates="creator",
+    )
+    discussion_messages: Mapped[list[DiscussionMessage]] = relationship(
+        "DiscussionMessage",
+        back_populates="user",
     )
 
     def __repr__(self) -> str:
