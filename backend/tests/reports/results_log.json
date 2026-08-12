@@ -325,6 +325,396 @@
     "error": null
   },
   {
+    "test": "tests/integration/test_bounty.py::test_create_bounty_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_bounty_as_student_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_bounty_unauthenticated",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_bounty_domain_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_bounty_technology_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_bounty_technology_wrong_domain",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_bounty_status_field_rejected",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_bounty_missing_required_field",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_bounty_negative_reward",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_bounty_fields_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_bounty_as_student_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_bounty_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_bounty_status_field_rejected",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_bounty_replaces_technologies",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_bounty_replaces_responsibilities",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_bounty_technology_wrong_domain",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_bounty_domain_changed_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_bounty_domain_changed_wrong_technology",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_bounty_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_bounty_as_admin_or_lab_admin",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_bounty_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_bounty_unauthenticated",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_delete_bounty_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_delete_bounty_as_student_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_delete_bounty_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_application_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_application_status_field_rejected",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_application_as_admin_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_application_unauthenticated",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_application_bounty_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_application_closed_bounty",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_application_duplicate",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_application_no_student_profile",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_create_application_missing_availability",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_application_as_owner",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_application_as_admin",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_application_as_other_student",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_application_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_application_unauthenticated",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_application_status_accepted",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_application_status_rejected",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_application_as_student_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_application_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_application_extra_field_rejected",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_application_seat_limit_conflict",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_reaccepting_application_does_not_consume_another_seat",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_delete_rejected_application_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_delete_pending_application_conflict",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_delete_other_students_application_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_delete_application_as_admin_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_delete_application_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_assign_work_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_assign_work_to_pending_application",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_assign_work_to_rejected_application",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_assign_work_already_assigned",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_assign_work_as_student_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_assign_work_application_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_assign_work_event_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_assigned_work_as_owner",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_assigned_work_as_admin",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_assigned_work_as_other_student",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_assigned_work_not_assigned",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_assigned_work_application_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_student_updates_work_status",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_student_updates_deliverable_status",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_student_cannot_update_title",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_admin_updates_work_details",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_admin_updates_deliverable_status",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_admin_cannot_change_application_id",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_admin_updates_event_id",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_admin_invalid_event_not_found",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_other_student_update_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_update_work_unknown_deliverable",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_my_skills_success",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_my_skills_success_with_multiple_domains",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_my_skills_empty",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_my_skills_no_profile",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_bounty.py::test_get_my_skills_as_admin_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
     "test": "tests/integration/test_event.py::test_create_event_as_club_admin",
     "outcome": "passed",
     "error": null

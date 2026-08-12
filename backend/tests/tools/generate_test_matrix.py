@@ -1317,6 +1317,774 @@ TESTS: dict[str, dict[str, str]] = {
             "Message: Discussion thread not found",
         ),
     },
+    "test_create_bounty_success": {
+        "id": "BN-001",
+        "description": "Club admin creates a bounty",
+        "api": "POST /api/bounties",
+        "inputs": "valid BountyCreate payload with technology + responsibilities",
+        "expected": _out(
+            "Status: 201 Created",
+            "title: 'Build Club Website'",
+            "status: 'open'",
+            "created_by: <admin id>",
+            "domain: WEB_DEVELOPMENT",
+        ),
+    },
+    "test_create_bounty_as_student_forbidden": {
+        "id": "BN-002",
+        "description": "Student tries to create a bounty",
+        "api": "POST /api/bounties",
+        "inputs": "valid BountyCreate payload",
+        "expected": _out(
+            "Status: 403 Forbidden",
+        ),
+    },
+    "test_create_bounty_unauthenticated": {
+        "id": "BN-003",
+        "description": "Create a bounty without a token",
+        "api": "POST /api/bounties",
+        "inputs": "valid BountyCreate payload, no auth header",
+        "expected": _out(
+            "Status: 401 Unauthorized",
+        ),
+    },
+    "test_create_bounty_domain_not_found": {
+        "id": "BN-004",
+        "description": "Create a bounty with a missing domain",
+        "api": "POST /api/bounties",
+        "inputs": "domain_id=00000000-0000-0000-0000-000000000000",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Domain not found",
+        ),
+    },
+    "test_create_bounty_technology_not_found": {
+        "id": "BN-005",
+        "description": "Create a bounty with a missing technology",
+        "api": "POST /api/bounties",
+        "inputs": "technologies=[00000000-0000-0000-0000-000000000000]",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Technology not found",
+        ),
+    },
+    "test_create_bounty_technology_wrong_domain": {
+        "id": "BN-006",
+        "description": "Technology that belongs to another domain is rejected",
+        "api": "POST /api/bounties",
+        "inputs": "web domain + pytorch (AI_ML) technology",
+        "expected": _out(
+            "Status: 400 Bad Request",
+            "Message: Technology does not belong to the selected domain",
+        ),
+    },
+    "test_create_bounty_status_field_rejected": {
+        "id": "BN-007",
+        "description": "Client-provided status/created_by/id are rejected",
+        "api": "POST /api/bounties",
+        "inputs": "payload plus status, created_by",
+        "expected": _out(
+            "Status: 422 Unprocessable Entity",
+            "extra='forbid' on BountyCreate",
+        ),
+    },
+    "test_create_bounty_missing_required_field": {
+        "id": "BN-008",
+        "description": "Create a bounty without description",
+        "api": "POST /api/bounties",
+        "inputs": "valid payload minus description",
+        "expected": _out(
+            "Status: 422 Unprocessable Entity",
+        ),
+    },
+    "test_create_bounty_negative_reward": {
+        "id": "BN-009",
+        "description": "Negative reward is rejected",
+        "api": "POST /api/bounties",
+        "inputs": "reward='-100'",
+        "expected": _out(
+            "Status: 422 Unprocessable Entity",
+        ),
+    },
+    "test_update_bounty_fields_success": {
+        "id": "BN-010",
+        "description": "Admin updates bounty title and seats",
+        "api": "PATCH /api/bounties/{bounty_id}",
+        "inputs": "title + student_seats (status left out)",
+        "expected": _out(
+            "Status: 200 OK",
+            "title: 'Updated Title'",
+            "student_seats: 8",
+            "status: 'open' (unchanged)",
+        ),
+    },
+    "test_update_bounty_as_student_forbidden": {
+        "id": "BN-011",
+        "description": "Student tries to update a bounty",
+        "api": "PATCH /api/bounties/{bounty_id}",
+        "inputs": "student token",
+        "expected": _out(
+            "Status: 403 Forbidden",
+        ),
+    },
+    "test_update_bounty_not_found": {
+        "id": "BN-012",
+        "description": "Update a non-existent bounty",
+        "api": "PATCH /api/bounties/{bounty_id}",
+        "inputs": "00000000-0000-0000-0000-000000000000",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Bounty not found",
+        ),
+    },
+    "test_update_bounty_status_field_rejected": {
+        "id": "BN-013",
+        "description": "Client-provided status/created_by/id are rejected",
+        "api": "PATCH /api/bounties/{bounty_id}",
+        "inputs": "payload plus status, created_by, id",
+        "expected": _out(
+            "Status: 422 Unprocessable Entity",
+        ),
+    },
+    "test_update_bounty_replaces_technologies": {
+        "id": "BN-014",
+        "description": "Technologies are replaced, not merged",
+        "api": "PATCH /api/bounties/{bounty_id}",
+        "inputs": "technologies=[TYPESCRIPT] after bounties has REACT",
+        "expected": _out(
+            "Status: 200 OK",
+            "technologies: ['TYPESCRIPT']",
+        ),
+    },
+    "test_update_bounty_replaces_responsibilities": {
+        "id": "BN-015",
+        "description": "Responsibilities are replaced wholesale",
+        "api": "PATCH /api/bounties/{bounty_id}",
+        "inputs": "responsibilities=[Design, Develop, Deploy]",
+        "expected": _out(
+            "Status: 200 OK",
+            "responsibilities: Design, Develop, Deploy",
+        ),
+    },
+    "test_update_bounty_technology_wrong_domain": {
+        "id": "BN-016",
+        "description": "Technology from another domain rejected on update",
+        "api": "PATCH /api/bounties/{bounty_id}",
+        "inputs": "technologies=[PYTORCH] on a WEB_DEVELOPMENT bounty",
+        "expected": _out(
+            "Status: 400 Bad Request",
+        ),
+    },
+    "test_update_bounty_domain_changed_success": {
+        "id": "BN-017",
+        "description": "Admin switches the bounty domain together with its technology",
+        "api": "PATCH /api/bounties/{bounty_id}",
+        "inputs": "new domain_id=AI_ML, technologies=[NEXT_JS]",
+        "expected": _out(
+            "Status: 200 OK",
+            "domain: AI_ML",
+            "technologies: ['NEXT_JS']",
+        ),
+    },
+    "test_update_bounty_domain_changed_wrong_technology": {
+        "id": "BN-018",
+        "description": "Orphaned technology rejected when the domain changes",
+        "api": "PATCH /api/bounties/{bounty_id}",
+        "inputs": "domain_id=AI_ML but technologies=[REACT (web)]",
+        "expected": _out(
+            "Status: 400 Bad Request",
+        ),
+    },
+    "test_get_bounty_success": {
+        "id": "BN-019",
+        "description": "Student fetches an existing bounty with nested data",
+        "api": "GET /api/bounties/{bounty_id}",
+        "inputs": "bounty with 1 technology and 1 responsibility",
+        "expected": _out(
+            "Status: 200 OK",
+            "status: 'open'",
+            "domain: WEB_DEVELOPMENT",
+            "technologies: ['REACT']",
+        ),
+    },
+    "test_get_bounty_as_admin_or_lab_admin": {
+        "id": "BN-020",
+        "description": "Lab admin is permitted to read a bounty",
+        "api": "GET /api/bounties/{bounty_id}",
+        "inputs": "lab admin token",
+        "expected": _out(
+            "Status: 200 OK",
+        ),
+    },
+    "test_get_bounty_not_found": {
+        "id": "BN-021",
+        "description": "Fetch a non-existent bounty",
+        "api": "GET /api/bounties/{bounty_id}",
+        "inputs": "00000000-0000-0000-0000-000000000000",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Bounty not found",
+        ),
+    },
+    "test_get_bounty_unauthenticated": {
+        "id": "BN-022",
+        "description": "Fetch a bounty without a token",
+        "api": "GET /api/bounties/{bounty_id}",
+        "inputs": "no auth header",
+        "expected": _out(
+            "Status: 401 Unauthorized",
+        ),
+    },
+    "test_delete_bounty_success": {
+        "id": "BN-023",
+        "description": "Admin deletes a bounty",
+        "api": "DELETE /api/bounties/{bounty_id}",
+        "inputs": "existing bounty id",
+        "expected": _out(
+            "Status: 204 No Content",
+            "bounty row removed",
+        ),
+    },
+    "test_delete_bounty_as_student_forbidden": {
+        "id": "BN-024",
+        "description": "Student tries to delete a bounty",
+        "api": "DELETE /api/bounties/{bounty_id}",
+        "inputs": "student token",
+        "expected": _out(
+            "Status: 403 Forbidden",
+        ),
+    },
+    "test_delete_bounty_not_found": {
+        "id": "BN-025",
+        "description": "Delete a non-existent bounty",
+        "api": "DELETE /api/bounties/{bounty_id}",
+        "inputs": "00000000-0000-0000-0000-000000000000",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Bounty not found",
+        ),
+    },
+    "test_create_application_success": {
+        "id": "APP-001",
+        "description": "Student applies to a bounty",
+        "api": "POST /api/bounties/{bounty_id}/applications",
+        "inputs": "availability + resume",
+        "expected": _out(
+            "Status: 201 Created",
+            "status: 'pending'",
+            "student_id: <student id>",
+            "bounty.title: 'Direct Bounty'",
+        ),
+    },
+    "test_create_application_status_field_rejected": {
+        "id": "APP-002",
+        "description": "Client-provided status/student_id rejected",
+        "api": "POST /api/bounties/{bounty_id}/applications",
+        "inputs": "payload plus status, student_id",
+        "expected": _out(
+            "Status: 422 Unprocessable Entity",
+        ),
+    },
+    "test_create_application_as_admin_forbidden": {
+        "id": "APP-003",
+        "description": "Club admin cannot apply to a bounty",
+        "api": "POST /api/bounties/{bounty_id}/applications",
+        "inputs": "admin token",
+        "expected": _out(
+            "Status: 403 Forbidden",
+        ),
+    },
+    "test_create_application_unauthenticated": {
+        "id": "APP-004",
+        "description": "Apply without a token",
+        "api": "POST /api/bounties/{bounty_id}/applications",
+        "inputs": "no auth header",
+        "expected": _out(
+            "Status: 401 Unauthorized",
+        ),
+    },
+    "test_create_application_bounty_not_found": {
+        "id": "APP-005",
+        "description": "Apply to a non-existent bounty",
+        "api": "POST /api/bounties/{bounty_id}/applications",
+        "inputs": "00000000-0000-0000-0000-000000000000",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Bounty not found",
+        ),
+    },
+    "test_create_application_closed_bounty": {
+        "id": "APP-006",
+        "description": "Apply to a CLOSED bounty is rejected",
+        "api": "POST /api/bounties/{bounty_id}/applications",
+        "inputs": "bounty status=closed",
+        "expected": _out(
+            "Status: 409 Conflict",
+            "Message: Bounty is not accepting applications",
+        ),
+    },
+    "test_create_application_duplicate": {
+        "id": "APP-007",
+        "description": "Applying twice is a conflict",
+        "api": "POST /api/bounties/{bounty_id}/applications",
+        "inputs": "same student applies twice",
+        "expected": _out(
+            "First: 201 Created",
+            "Second: 409 Conflict",
+            "Message: You have already applied to this bounty",
+        ),
+    },
+    "test_create_application_no_student_profile": {
+        "id": "APP-008",
+        "description": "Student without a profile cannot apply",
+        "api": "POST /api/bounties/{bounty_id}/applications",
+        "inputs": "student user with no Student row",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Student profile not found",
+        ),
+    },
+    "test_create_application_missing_availability": {
+        "id": "APP-009",
+        "description": "Apply without availability",
+        "api": "POST /api/bounties/{bounty_id}/applications",
+        "inputs": "resume only",
+        "expected": _out(
+            "Status: 422 Unprocessable Entity",
+        ),
+    },
+    "test_get_application_as_owner": {
+        "id": "APP-010",
+        "description": "Student fetches their own application",
+        "api": "GET /api/applications/{application_id}",
+        "inputs": "student token",
+        "expected": _out(
+            "Status: 200 OK",
+            "status: 'accepted'",
+            "bounty.title: 'Direct Bounty'",
+        ),
+    },
+    "test_get_application_as_admin": {
+        "id": "APP-011",
+        "description": "Club admin fetches any application",
+        "api": "GET /api/applications/{application_id}",
+        "inputs": "admin token",
+        "expected": _out(
+            "Status: 200 OK",
+        ),
+    },
+    "test_get_application_as_other_student": {
+        "id": "APP-012",
+        "description": "Another student cannot read the application",
+        "api": "GET /api/applications/{application_id}",
+        "inputs": "other student token",
+        "expected": _out(
+            "Status: 403 Forbidden",
+        ),
+    },
+    "test_get_application_not_found": {
+        "id": "APP-013",
+        "description": "Fetch a non-existent application",
+        "api": "GET /api/applications/{application_id}",
+        "inputs": "00000000-0000-0000-0000-000000000000",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Application not found",
+        ),
+    },
+    "test_get_application_unauthenticated": {
+        "id": "APP-014",
+        "description": "Fetch an application without a token",
+        "api": "GET /api/applications/{application_id}",
+        "inputs": "no auth header",
+        "expected": _out(
+            "Status: 401 Unauthorized",
+        ),
+    },
+    "test_update_application_status_accepted": {
+        "id": "APP-015",
+        "description": "Admin accepts a pending application",
+        "api": "PATCH /api/applications/{application_id}",
+        "inputs": "status='accepted'",
+        "expected": _out(
+            "Status: 200 OK",
+            "status: 'accepted'",
+        ),
+    },
+    "test_update_application_status_rejected": {
+        "id": "APP-016",
+        "description": "Admin rejects an application",
+        "api": "PATCH /api/applications/{application_id}",
+        "inputs": "status='rejected'",
+        "expected": _out(
+            "Status: 200 OK",
+            "status: 'rejected'",
+        ),
+    },
+    "test_update_application_as_student_forbidden": {
+        "id": "APP-017",
+        "description": "Student cannot change their own status",
+        "api": "PATCH /api/applications/{application_id}",
+        "inputs": "student token, status='rejected'",
+        "expected": _out(
+            "Status: 403 Forbidden",
+        ),
+    },
+    "test_update_application_not_found": {
+        "id": "APP-018",
+        "description": "Update a non-existent application",
+        "api": "PATCH /api/applications/{application_id}",
+        "inputs": "00000000-0000-0000-0000-000000000000",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Application not found",
+        ),
+    },
+    "test_update_application_extra_field_rejected": {
+        "id": "APP-019",
+        "description": "Updates accept only status; other fields rejected",
+        "api": "PATCH /api/applications/{application_id}",
+        "inputs": "status + availability",
+        "expected": _out(
+            "Status: 422 Unprocessable Entity",
+        ),
+    },
+    "test_update_application_seat_limit_conflict": {
+        "id": "APP-020",
+        "description": "Accepting past the seat limit is a conflict",
+        "api": "PATCH /api/applications/{application_id}",
+        "inputs": "bounty seat_limit=1, two applications",
+        "expected": _out(
+            "First: 200 OK",
+            "Second: 409 Conflict",
+            "Message: All seats for this bounty are filled",
+        ),
+    },
+    "test_reaccepting_application_does_not_consume_another_seat": {
+        "id": "APP-021",
+        "description": "Re-accepting an accepted application is idempotent",
+        "api": "PATCH /api/applications/{application_id}",
+        "inputs": "accept an already-accepted application (seat_limit=1)",
+        "expected": _out(
+            "Status: 200 OK",
+        ),
+    },
+    "test_delete_rejected_application_success": {
+        "id": "APP-022",
+        "description": "Student deletes their own rejected application",
+        "api": "DELETE /api/applications/{application_id}",
+        "inputs": "rejected application",
+        "expected": _out(
+            "Status: 204 No Content",
+            "row removed",
+        ),
+    },
+    "test_delete_pending_application_conflict": {
+        "id": "APP-023",
+        "description": "Only rejected applications can be deleted",
+        "api": "DELETE /api/applications/{application_id}",
+        "inputs": "pending application",
+        "expected": _out(
+            "Status: 409 Conflict",
+            "Message: Only a rejected application can be deleted",
+        ),
+    },
+    "test_delete_other_students_application_forbidden": {
+        "id": "APP-024",
+        "description": "Another student cannot delete the application",
+        "api": "DELETE /api/applications/{application_id}",
+        "inputs": "other student token",
+        "expected": _out(
+            "Status: 403 Forbidden",
+        ),
+    },
+    "test_delete_application_as_admin_forbidden": {
+        "id": "APP-025",
+        "description": "Club admin cannot delete an application",
+        "api": "DELETE /api/applications/{application_id}",
+        "inputs": "admin token",
+        "expected": _out(
+            "Status: 403 Forbidden",
+        ),
+    },
+    "test_delete_application_not_found": {
+        "id": "APP-026",
+        "description": "Delete a non-existent application",
+        "api": "DELETE /api/applications/{application_id}",
+        "inputs": "00000000-0000-0000-0000-000000000000",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Application not found",
+        ),
+    },
+    "test_assign_work_success": {
+        "id": "WRK-001",
+        "description": "Admin assigns work to an accepted application",
+        "api": "POST /api/applications/{application_id}/work",
+        "inputs": "accepted application, work payload + 2 deliverables",
+        "expected": _out(
+            "Status: 201 Created",
+            "status: 'assigned'",
+            "application.status: 'accepted'",
+            "deliverables all 'pending'",
+        ),
+    },
+    "test_assign_work_to_pending_application": {
+        "id": "WRK-002",
+        "description": "Pending application cannot receive work",
+        "api": "POST /api/applications/{application_id}/work",
+        "inputs": "pending application",
+        "expected": _out(
+            "Status: 409 Conflict",
+            "Message: Only an accepted application can receive work",
+        ),
+    },
+    "test_assign_work_to_rejected_application": {
+        "id": "WRK-003",
+        "description": "Rejected application cannot receive work",
+        "api": "POST /api/applications/{application_id}/work",
+        "inputs": "rejected application",
+        "expected": _out(
+            "Status: 409 Conflict",
+        ),
+    },
+    "test_assign_work_already_assigned": {
+        "id": "WRK-004",
+        "description": "Assigning work twice is a conflict",
+        "api": "POST /api/applications/{application_id}/work",
+        "inputs": "assign twice",
+        "expected": _out(
+            "First: 201 Created",
+            "Second: 409 Conflict",
+            "Message: Work is already assigned to this application",
+        ),
+    },
+    "test_assign_work_as_student_forbidden": {
+        "id": "WRK-005",
+        "description": "Student cannot assign work",
+        "api": "POST /api/applications/{application_id}/work",
+        "inputs": "student token",
+        "expected": _out(
+            "Status: 403 Forbidden",
+        ),
+    },
+    "test_assign_work_application_not_found": {
+        "id": "WRK-006",
+        "description": "Assign work to a non-existent application",
+        "api": "POST /api/applications/{application_id}/work",
+        "inputs": "00000000-0000-0000-0000-000000000000",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Application not found",
+        ),
+    },
+    "test_assign_work_event_not_found": {
+        "id": "WRK-007",
+        "description": "Assign work referencing a missing event",
+        "api": "POST /api/applications/{application_id}/work",
+        "inputs": "event_id=00000000-0000-0000-0000-000000000000",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Event not found",
+        ),
+    },
+    "test_get_assigned_work_as_owner": {
+        "id": "WRK-008",
+        "description": "Student fetches their assigned work",
+        "api": "GET /api/applications/{application_id}/work",
+        "inputs": "student token",
+        "expected": _out(
+            "Status: 200 OK",
+            "application_id: <application id>",
+            "deliverables: 2",
+        ),
+    },
+    "test_get_assigned_work_as_admin": {
+        "id": "WRK-009",
+        "description": "Club admin fetches assigned work",
+        "api": "GET /api/applications/{application_id}/work",
+        "inputs": "admin token",
+        "expected": _out(
+            "Status: 200 OK",
+        ),
+    },
+    "test_get_assigned_work_as_other_student": {
+        "id": "WRK-010",
+        "description": "Another student cannot read the work",
+        "api": "GET /api/applications/{application_id}/work",
+        "inputs": "other student token",
+        "expected": _out(
+            "Status: 403 Forbidden",
+        ),
+    },
+    "test_get_assigned_work_not_assigned": {
+        "id": "WRK-011",
+        "description": "No work row for the application",
+        "api": "GET /api/applications/{application_id}/work",
+        "inputs": "accepted application with no work",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Work not found for this application",
+        ),
+    },
+    "test_get_assigned_work_application_not_found": {
+        "id": "WRK-012",
+        "description": "Fetch work for a non-existent application",
+        "api": "GET /api/applications/{application_id}/work",
+        "inputs": "00000000-0000-0000-0000-000000000000",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Application not found",
+        ),
+    },
+    "test_student_updates_work_status": {
+        "id": "WRK-013",
+        "description": "Student moves work to in_progress",
+        "api": "PATCH /api/applications/{application_id}/work",
+        "inputs": "status='in_progress'",
+        "expected": _out(
+            "Status: 200 OK",
+            "status: 'in_progress'",
+        ),
+    },
+    "test_student_updates_deliverable_status": {
+        "id": "WRK-014",
+        "description": "Student marks a deliverable completed",
+        "api": "PATCH /api/applications/{application_id}/work",
+        "inputs": "deliverable id + status='completed'",
+        "expected": _out(
+            "Status: 200 OK",
+            "deliverable status: 'completed'",
+        ),
+    },
+    "test_student_cannot_update_title": {
+        "id": "WRK-015",
+        "description": "Student cannot edit admin-only work fields",
+        "api": "PATCH /api/applications/{application_id}/work",
+        "inputs": "title='Hacked'",
+        "expected": _out(
+            "Status: 422 Unprocessable Entity",
+        ),
+    },
+    "test_admin_updates_work_details": {
+        "id": "WRK-016",
+        "description": "Admin edits work title, description, deadline, status",
+        "api": "PATCH /api/applications/{application_id}/work",
+        "inputs": "title/task_description/deadline/status",
+        "expected": _out(
+            "Status: 200 OK",
+            "title: 'Redesign'",
+            "status: 'in_progress'",
+        ),
+    },
+    "test_admin_updates_deliverable_status": {
+        "id": "WRK-017",
+        "description": "Admin updates a deliverable status",
+        "api": "PATCH /api/applications/{application_id}/work",
+        "inputs": "deliverable id + status='in_progress'",
+        "expected": _out(
+            "Status: 200 OK",
+            "deliverable status: 'in_progress'",
+        ),
+    },
+    "test_admin_cannot_change_application_id": {
+        "id": "WRK-018",
+        "description": "application_id is immutable",
+        "api": "PATCH /api/applications/{application_id}/work",
+        "inputs": "application_id=<other uuid>",
+        "expected": _out(
+            "Status: 422 Unprocessable Entity",
+        ),
+    },
+    "test_admin_updates_event_id": {
+        "id": "WRK-019",
+        "description": "Admin links work to an event",
+        "api": "PATCH /api/applications/{application_id}/work",
+        "inputs": "valid event id",
+        "expected": _out(
+            "Status: 200 OK",
+            "event.name: 'Hackathon'",
+        ),
+    },
+    "test_admin_invalid_event_not_found": {
+        "id": "WRK-020",
+        "description": "Linking a missing event is a 404",
+        "api": "PATCH /api/applications/{application_id}/work",
+        "inputs": "event_id=00000000-0000-0000-0000-000000000000",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Event not found",
+        ),
+    },
+    "test_other_student_update_forbidden": {
+        "id": "WRK-021",
+        "description": "Another student cannot update the work",
+        "api": "PATCH /api/applications/{application_id}/work",
+        "inputs": "other student token",
+        "expected": _out(
+            "Status: 403 Forbidden",
+        ),
+    },
+    "test_update_work_unknown_deliverable": {
+        "id": "WRK-022",
+        "description": "Updating a deliverable that does not belong to the work",
+        "api": "PATCH /api/applications/{application_id}/work",
+        "inputs": "deliverable id=00000000-0000-0000-0000-000000000000",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Deliverable not found",
+        ),
+    },
+    "test_get_my_skills_success": {
+        "id": "SKY-001",
+        "description": "Student fetches their skills grouped by domain",
+        "api": "GET /api/students/me/skills",
+        "inputs": "student with WEB_DEVELOPMENT, REACT + NODE_JS",
+        "expected": _out(
+            "Status: 200 OK",
+            "domain: WEB_DEVELOPMENT",
+            "technologies: REACT, NODE_JS",
+        ),
+    },
+    "test_get_my_skills_success_with_multiple_domains": {
+        "id": "SKY-002",
+        "description": "Skills across two domains",
+        "api": "GET /api/students/me/skills",
+        "inputs": "WEB_DEVELOPMENT/REACT + AI_ML/PYTORCH",
+        "expected": _out(
+            "Status: 200 OK",
+            "2 domains: WEB_DEVELOPMENT, AI_ML",
+        ),
+    },
+    "test_get_my_skills_empty": {
+        "id": "SKY-003",
+        "description": "Student with no skills returns an empty list",
+        "api": "GET /api/students/me/skills",
+        "inputs": "student with a profile but no skills",
+        "expected": _out(
+            "Status: 200 OK",
+            "body: []",
+        ),
+    },
+    "test_get_my_skills_no_profile": {
+        "id": "SKY-004",
+        "description": "Student without a profile cannot fetch skills",
+        "api": "GET /api/students/me/skills",
+        "inputs": "student user with no Student row",
+        "expected": _out(
+            "Status: 404 Not Found",
+            "Message: Student profile not found",
+        ),
+    },
+    "test_get_my_skills_as_admin_forbidden": {
+        "id": "SKY-005",
+        "description": "Club admin cannot fetch student skills",
+        "api": "GET /api/students/me/skills",
+        "inputs": "admin token",
+        "expected": _out(
+            "Status: 403 Forbidden",
+        ),
+    },
 }
 
 TEST_FILE_DIRS = [
