@@ -278,3 +278,44 @@ class EventVenue(str, Enum):
     CLASSROOM = "classroom"
     ONLINE = "online"
     OTHER = "other"
+
+class BountyStatus(str, Enum):
+    """Lifecycle state of a campus bounty."""
+
+    OPEN = "open"
+    CLOSED = "closed"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class ApplicationStatus(str, Enum):
+    """State of a student's application to a bounty.
+
+    Students cannot withdraw; an application that is not ``accepted`` is
+    ultimately ``rejected``.
+    """
+
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+
+
+class WorkStatus(str, Enum):
+    """Progress state of work assigned to an accepted student.
+
+    Acceptance is modelled by :class:`ApplicationStatus`; a ``Work`` record is
+    only created for an accepted application.
+    """
+
+    ASSIGNED = "assigned"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+
+
+class DeliverableStatus(str, Enum):
+    """Progress state of a deliverable attached to a work record."""
+
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"

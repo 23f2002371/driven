@@ -17,6 +17,7 @@ from app.core.database import Base
 from app.utils.enums import Department
 
 if TYPE_CHECKING:
+    from app.models.bounty import Application
     from app.models.domain import StudentDomain
     from app.models.event import Certificate, EventRegistration
     from app.models.inventory import (
@@ -92,6 +93,11 @@ class Student(Base):
     )
     borrow_details: Mapped[list[BorrowDetail]] = relationship(
         "BorrowDetail",
+        back_populates="student",
+        cascade="all, delete-orphan",
+    )
+    bounties_applications: Mapped[list[Application]] = relationship(
+        "Application",
         back_populates="student",
         cascade="all, delete-orphan",
     )

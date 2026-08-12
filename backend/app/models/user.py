@@ -18,6 +18,7 @@ from app.utils.enums import UserRole
 
 
 if TYPE_CHECKING:
+    from app.models.bounty import Bounty
     from app.models.student import Student
     from backend.app.models.support_desk import DiscussionMessage, DiscussionThread
 
@@ -76,6 +77,10 @@ class User(Base):
     discussion_messages: Mapped[list[DiscussionMessage]] = relationship(
         "DiscussionMessage",
         back_populates="user",
+    )
+    bounties_created: Mapped[list[Bounty]] = relationship(
+        "Bounty",
+        back_populates="created_by_user",
     )
 
     def __repr__(self) -> str:

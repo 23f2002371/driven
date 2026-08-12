@@ -21,6 +21,7 @@ from app.core.database import Base
 from app.utils.enums import DomainEnum, TechnologyEnum
 
 if TYPE_CHECKING:
+    from app.models.bounty import Bounty, BountyTechnology
     from app.models.student import Student
 
 
@@ -50,6 +51,11 @@ class Domain(Base):
     )
     student_domains: Mapped[list[StudentDomain]] = relationship(
         "StudentDomain",
+        back_populates="domain",
+        cascade="all, delete-orphan",
+    )
+    bounties: Mapped[list[Bounty]] = relationship(
+        "Bounty",
         back_populates="domain",
         cascade="all, delete-orphan",
     )
@@ -92,6 +98,11 @@ class Technology(Base):
     domain: Mapped[Domain] = relationship("Domain", back_populates="technologies")
     student_technologies: Mapped[list[StudentTechnology]] = relationship(
         "StudentTechnology",
+        back_populates="technology",
+        cascade="all, delete-orphan",
+    )
+    bounties: Mapped[list[BountyTechnology]] = relationship(
+        "BountyTechnology",
         back_populates="technology",
         cascade="all, delete-orphan",
     )

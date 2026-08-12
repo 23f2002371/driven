@@ -41,6 +41,7 @@ from app.utils.enums import (
 
 
 if TYPE_CHECKING:
+    from app.models.bounty import Work
     from app.models.student import Student
     from backend.app.models.support_desk import DiscussionThread
 
@@ -138,6 +139,10 @@ class Event(Base):
         back_populates="event",
         cascade="all, delete-orphan",
         uselist=False,
+    )
+    works: Mapped[list[Work]] = relationship(
+        "Work",
+        back_populates="event",
     )
 
 
