@@ -5,7 +5,7 @@ All feature routers are aggregated here and mounted under ``settings.API_STR``.
 
 from fastapi import APIRouter
 
-from app.api.routes import auth, event, health,inventory
+from app.api.routes import auth, bounty, event, health, inventory, support_desk
 
 api_router = APIRouter()
 
