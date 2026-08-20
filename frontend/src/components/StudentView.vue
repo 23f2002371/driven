@@ -22,70 +22,70 @@
 
       <main class="std-main">
         <div v-if="currentTab === 'dashboard'" class="pt-3">
-           <div class="row g-4 mb-4">
-             <div class="col-md-3">
-              <div class="std-metric-card">
-                <div class="std-metric-icon purple"><i class="bi bi-calendar-event-fill"></i></div>
-                <div class="std-metric-body">
-                  <span class="std-metric-label">Ongoing Events</span>
-                  <div class="std-metric-row">
-                    <span class="std-metric-value">3</span>
-                    <span class="std-metric-trend up"><i class="bi bi-arrow-up-short"></i>+1</span>
-                  </div>
+        <div class="row g-4 mb-4">
+          <div class="col-md-3 col-sm-6">
+            <div class="std-metric-card">
+              <div class="std-metric-icon purple"><i class="bi bi-calendar-event-fill"></i></div>
+              <div class="std-metric-body">
+                <span class="std-metric-label">Ongoing Events</span>
+                <div class="std-metric-row">
+                  <span class="std-metric-value">{{ ongoingEvents.length }}</span>
+                  <span class="std-metric-trend up"><i class="bi bi-arrow-up-short"></i>+{{ ongoingEvents.length }}</span>
                 </div>
-               </div>
-             </div>
-             <div class="col-md-3">
-              <div class="std-metric-card">
-                <div class="std-metric-icon blue"><i class="bi bi-check-circle-fill"></i></div>
-                <div class="std-metric-body">
-                  <span class="std-metric-label">Applied Events</span>
-                  <div class="std-metric-row">
-                    <span class="std-metric-value">{{ store.registeredEvents.length }}</span>
-                    <span class="std-metric-trend up"><i class="bi bi-arrow-up-short"></i>{{ store.registeredEvents.length > 0 ? '+' + store.registeredEvents.length : '0' }}</span>
-                  </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="std-metric-card">
+              <div class="std-metric-icon blue"><i class="bi bi-check-circle-fill"></i></div>
+              <div class="std-metric-body">
+                <span class="std-metric-label">Applied Events</span>
+                <div class="std-metric-row">
+                  <span class="std-metric-value">{{ (store.registeredEvents || []).length }}</span>
+                  <span class="std-metric-trend up"><i class="bi bi-arrow-up-short"></i>+{{ (store.registeredEvents || []).length }}</span>
                 </div>
-               </div>
-             </div>
-             <div class="col-md-3">
-              <div class="std-metric-card">
-                <div class="std-metric-icon amber"><i class="bi bi-archive-fill"></i></div>
-                <div class="std-metric-body">
-                  <span class="std-metric-label">Closed Events</span>
-                  <div class="std-metric-row">
-                    <span class="std-metric-value">1</span>
-                    <span class="std-metric-trend down"><i class="bi bi-arrow-down-short"></i>-0</span>
-                  </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="std-metric-card">
+              <div class="std-metric-icon amber"><i class="bi bi-archive-fill"></i></div>
+              <div class="std-metric-body">
+                <span class="std-metric-label">Closed Events</span>
+                <div class="std-metric-row">
+                  <span class="std-metric-value">1</span>
+                  <span class="std-metric-trend down"><i class="bi bi-arrow-down-short"></i>-0</span>
                 </div>
-               </div>
-             </div>
-             <div class="col-md-3">
-              <div class="std-metric-card">
-                <div class="std-metric-icon green"><i class="bi bi-box-seam-fill"></i></div>
-                <div class="std-metric-body">
-                  <span class="std-metric-label">Borrowed Items</span>
-                  <div class="std-metric-row">
-                    <span class="std-metric-value">{{ myBorrowedCount }}</span>
-                    <span class="std-metric-trend up"><i class="bi bi-arrow-up-short"></i>+{{ myBorrowedCount }}</span>
-                  </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="std-metric-card">
+              <div class="std-metric-icon green"><i class="bi bi-box-seam-fill"></i></div>
+              <div class="std-metric-body">
+                <span class="std-metric-label">Borrowed Items</span>
+                <div class="std-metric-row">
+                  <span class="std-metric-value">{{ myBorrowedCount }}</span>
+                  <span class="std-metric-trend up"><i class="bi bi-arrow-up-short"></i>+{{ myBorrowedCount }}</span>
                 </div>
-               </div>
-             </div>
-           </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-          <div class="std-actions mb-4">
-            <button class="std-btn-primary" @click="currentTab = 'events'">
-              <i class="bi bi-calendar-event me-2"></i>Browse Events
-            </button>
-            <button class="std-btn-secondary" @click="currentTab = 'inventory'">
-              <i class="bi bi-box-seam me-2"></i>Request Inventory
-            </button>
-           </div>
+        <div class="std-actions mb-4">
+          <button class="std-btn-primary" @click="currentTab = 'events'">
+            <i class="bi bi-calendar-event me-2"></i>Browse Events
+          </button>
+          <button class="std-btn-secondary" @click="currentTab = 'inventory'">
+            <i class="bi bi-box-seam me-2"></i>Request Inventory
+          </button>
+        </div>
 
         <h6 class="fw-bold mb-3 text-light">Ongoing Club Events</h6>
         <div class="row g-3 mb-5">
-          <div v-for="event in ongoingEvents" :key="event.id" class="col-md-4">
-            <div class="card-glass p-0 h-100 d-flex flex-column event-card-hover overflow-hidden" @click="openEventDetails(event)">
+          <div v-for="event in ongoingEvents" :key="event.id" class="col-md-4 col-sm-6">
+            <div class="card-glass p-0 h-100 d-flex flex-column event-card-hover overflow-hidden" @click="openEventDetails(event)" style="min-height: 280px;">
               <div class="event-card-img-sm" :style="{ backgroundImage: `url(${event.image})` }">
                 <div class="event-img-overlay d-flex justify-content-between align-items-start p-2">
                   <span class="status-badge status-ongoing">Ongoing</span>
@@ -94,10 +94,10 @@
               </div>
               <div class="p-3 d-flex flex-column flex-grow-1 justify-content-between">
                 <div>
-                  <h6 class="fw-bold text-light mb-1">{{ event.name }}</h6>
-                  <p class="text-secondary small m-0"><i class="bi bi-geo-alt-fill me-1"></i>{{ event.venue }}</p>
+                  <h6 class="fw-bold text-light mb-1" style="color: #f1f5f9 !important;">{{ event.name }}</h6>
+                  <p class="text-secondary small m-0" style="color: #94a3b8 !important;"><i class="bi bi-geo-alt-fill me-1"></i>{{ event.venue }}</p>
                 </div>
-                <div v-if="store.registeredEvents.includes(event.id)" class="d-flex align-items-center gap-2 mt-3">
+                <div v-if="(store.registeredEvents || []).includes(event.id)" class="d-flex align-items-center gap-2 mt-3">
                   <button class="btn-dashboard-primary btn-sm flex-grow-1" disabled style="opacity: 0.85;">
                     <i class="bi bi-check-circle-fill me-1"></i>Registered
                   </button>
