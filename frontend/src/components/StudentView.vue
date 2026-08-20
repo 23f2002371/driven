@@ -515,7 +515,7 @@ const refreshTickets = () => {};
 .std-bg {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: -1;
   pointer-events: none;
   background: #0c1220;
 }
@@ -542,6 +542,8 @@ const refreshTickets = () => {};
 }
 
 .std-wrapper {
+  position: relative;
+  z-index: 1;
   margin-left: 240px;
   min-height: 100vh;
   overflow: visible;
@@ -642,13 +644,10 @@ const refreshTickets = () => {};
 }
 
 .std-main {
-  padding: 0 2rem;
+  position: relative;
+  z-index: 2;
+  padding: 0 2rem 3rem;
   margin-left: 0;
-  animation: stdFadeIn 0.3s ease;
-}
-@keyframes stdFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 /* ── Metric Cards ── */
