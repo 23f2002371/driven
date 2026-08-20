@@ -944,6 +944,19 @@ body {
 .auth-input::placeholder {
   color: rgba(255,255,255,0.5);
 }
+.auth-error {
+  font-size: 0.82rem;
+  color: #f87171;
+  background: rgba(248,113,113,0.08);
+  border: 1px solid rgba(248,113,113,0.2);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+}
+.auth-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
 select.auth-input {
   appearance: none;
   -webkit-appearance: none;

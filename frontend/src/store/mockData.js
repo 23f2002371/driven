@@ -11,8 +11,19 @@ const clubs = [
 
 const difficultyLevels = ['Easy', 'Medium', 'Advanced'];
 
+const savedToken = localStorage.getItem('driven_token');
+let savedUser = null;
+try {
+  savedUser = JSON.parse(localStorage.getItem('driven_user') || 'null');
+} catch {
+  savedUser = null;
+}
+
 export const store = reactive({
-  currentUserRole: 'home',
+  token: savedToken,
+  currentUser: savedUser,
+  isAuthenticated: Boolean(savedToken),
+  currentUserRole: savedUser ? savedUser.role : 'home',
   viewingEventDetails: null,
   registeredEvents: [3, 5, 6],
   showRegistrationModal: false,
@@ -553,5 +564,23 @@ export const store = reactive({
       app.thankYouMessage = 'Thank you for your contribution! Your efforts made the event a success.';
       app.checklist.forEach(item => { item.completed = true; });
     }
+  },
+
+  setAuth(token, user) {
+    this.token = token;
+    this.currentUser = user;
+    this.isAuthenticated = true;
+    this.currentUserRole = (user && user.role) || 'student';
+    localStorage.setItem('driven_token', token);
+    localStorage.setItem('driven_user', JSON.stringify(user));
+  },
+
+  logout() {
+    this.token = null;
+    this.currentUser = null;
+    this.isAuthenticated = false;
+    this.currentUserRole = 'home';
+    localStorage.removeItem('driven_token');
+    localStorage.removeItem('driven_user');
   }
 });
