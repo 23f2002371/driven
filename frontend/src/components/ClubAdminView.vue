@@ -595,6 +595,8 @@ const handleResolve = (ticket) => {
 
 /* ── Main Wrapper ── */
 .main-wrapper {
+  position: relative;
+  z-index: 1;
   margin-left: 240px;
   flex: 1;
   display: flex;
@@ -698,7 +700,9 @@ const handleResolve = (ticket) => {
 
 /* ── Main Content ── */
 .main-content {
-  padding: 0 2rem;
+  position: relative;
+  z-index: 2;
+  padding: 0 2rem 3rem;
   flex: 1;
   margin-left: 0;
 }
