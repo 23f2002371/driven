@@ -7,7 +7,7 @@
         title="Lab Administrator Portal"
         badge-text="Facility Controller"
         badge-class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill"
-        avatar-initials="LA"
+        :avatar-initials="adminInitials"
         :notif-count="labNotifCount"
         @notif-click="currentTab = 'notifications'"
       />
@@ -457,6 +457,12 @@ const queueSearch = ref('');
 
 const labNotifs = computed(() => store.notifications.filter(n => n.role === 'lab_admin'));
 const labNotifCount = computed(() => labNotifs.value.filter(n => !n.read).length);
+
+const adminInitials = computed(() => {
+  const name = store.currentUser?.full_name || 'Lab Admin';
+  const parts = name.trim().split(/\s+/);
+  return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+});
 
 const navItems = computed(() => [
   { label: 'Dashboard', icon: 'bar-chart-fill', key: 'dashboard' },
