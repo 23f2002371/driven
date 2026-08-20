@@ -85,18 +85,20 @@
         <h6 class="fw-bold mb-3 text-light">Ongoing Club Events</h6>
         <div class="row g-3 mb-5">
           <div v-for="event in ongoingEvents" :key="event.id" class="col-md-4">
-            <div class="card-glass p-0 event-card-hover overflow-hidden" @click="openEventDetails(event)">
+            <div class="card-glass p-0 h-100 d-flex flex-column event-card-hover overflow-hidden" @click="openEventDetails(event)">
               <div class="event-card-img-sm" :style="{ backgroundImage: `url(${event.image})` }">
                 <div class="event-img-overlay d-flex justify-content-between align-items-start p-2">
                   <span class="status-badge status-ongoing">Ongoing</span>
                   <span class="event-date-tag-sm"><i class="bi bi-calendar3 me-1"></i>{{ formatDate(event.date) }}</span>
                 </div>
               </div>
-              <div class="p-3">
-                <h6 class="fw-bold text-light mb-1">{{ event.name }}</h6>
-                <p class="text-secondary small m-0"><i class="bi bi-geo-alt-fill me-1"></i>{{ event.venue }}</p>
+              <div class="p-3 d-flex flex-column flex-grow-1 justify-content-between">
+                <div>
+                  <h6 class="fw-bold text-light mb-1">{{ event.name }}</h6>
+                  <p class="text-secondary small m-0"><i class="bi bi-geo-alt-fill me-1"></i>{{ event.venue }}</p>
+                </div>
                 <div v-if="store.registeredEvents.includes(event.id)" class="d-flex align-items-center gap-2 mt-3">
-                  <button class="btn-dashboard-primary btn-sm flex-grow-1 opacity-50" disabled>
+                  <button class="btn-dashboard-primary btn-sm flex-grow-1" disabled style="opacity: 0.85;">
                     <i class="bi bi-check-circle-fill me-1"></i>Registered
                   </button>
                   <button class="btn-calendar-sm" title="Add to Calendar" @click.stop="openCalendarForEvent(event)">
@@ -105,10 +107,10 @@
                 </div>
                 <button v-else class="btn-dashboard-primary btn-sm w-100 mt-3" @click.stop="openEventDetails(event)">
                   View Details & Register
-                 </button>
-               </div>
-             </div>
-           </div>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <h6 class="fw-bold mb-3 text-muted">Closed Events</h6>
@@ -656,22 +658,23 @@ const refreshTickets = () => {};
 
 /* ── Metric Cards ── */
 .std-metric-card {
-  background: rgba(18, 27, 48, 0.65);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(18, 27, 48, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
   padding: 1.25rem;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
-  align-items: flex-start;
-  gap: 2rem;
+  align-items: center;
+  gap: 1.25rem;
 }
 .std-metric-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(129,140,248,0.2);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-  background: rgba(22, 33, 55, 0.7);
+  border-color: rgba(129, 140, 248, 0.35);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35), 0 0 20px rgba(99, 102, 241, 0.12);
+  background: rgba(22, 33, 55, 0.98);
 }
 .std-metric-icon {
   width: 44px; height: 44px;
