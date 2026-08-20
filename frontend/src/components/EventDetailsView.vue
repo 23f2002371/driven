@@ -336,7 +336,7 @@ const similarEvents = computed(() => {
 });
 
 const goBack = () => { router.back(); };
-const goHome = () => { router.push('/'); store.currentUserRole = 'home'; };
+const goHome = () => { router.push({ name: 'home' }); };
 const openEvent = (ev) => { router.push({ name: 'event-details', params: { eventName: encodeURIComponent(ev.name) } }); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
 const handleRegister = () => {

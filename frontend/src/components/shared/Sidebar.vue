@@ -15,7 +15,7 @@
       </div>
     </nav>
     <div class="sidebar-footer">
-      <button class="btn-logout" @click="store.currentUserRole = 'home'">
+      <button class="btn-logout" @click="store.logout()">
         <i class="bi bi-box-arrow-right me-2"></i>Logout
       </button>
     </div>

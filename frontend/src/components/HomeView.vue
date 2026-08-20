@@ -457,8 +457,8 @@
       <div class="auth-card glass-modal">
         <div class="auth-card-header">
           <div class="auth-tabs">
-            <button class="auth-tab" :class="{ active: authMode === 'login' }" @click="authMode = 'login'">Sign In</button>
-            <button class="auth-tab" :class="{ active: authMode === 'signup' }" @click="authMode = 'signup'">Sign Up</button>
+            <button class="auth-tab" :class="{ active: authMode === 'login' }" @click="switchAuthMode('login')">Sign In</button>
+            <button class="auth-tab" :class="{ active: authMode === 'signup' }" @click="switchAuthMode('signup')">Sign Up</button>
           </div>
           <button class="auth-close" @click="activeModal = null"><i class="bi bi-x-lg"></i></button>
         </div>
@@ -472,14 +472,14 @@
               <label class="auth-label">Password</label>
               <input v-model="loginForm.password" type="password" class="auth-input" placeholder="Enter your password" required />
             </div>
-            <div class="auth-field">
-              <label class="auth-label">Sign in as</label>
-              <RoleDropdown v-model="loginForm.role" />
-            </div>
+            <div v-if="authError" class="auth-error">{{ authError }}</div>
             <div class="auth-forgot">
               <a href="#" @click.prevent>Forgot password?</a>
             </div>
-            <button type="submit" class="auth-submit">Sign In <i class="bi bi-arrow-right ms-2"></i></button>
+            <button type="submit" class="auth-submit" :disabled="authLoading">
+              <span v-if="authLoading" class="spinner-border spinner-border-sm me-2"></span>
+              Sign In <i v-if="!authLoading" class="bi bi-arrow-right ms-2"></i>
+            </button>
           </form>
           <form v-else @submit.prevent="handleSignup" class="auth-form">
             <div class="auth-field">
@@ -494,11 +494,11 @@
               <label class="auth-label">Password</label>
               <input v-model="signupForm.password" type="password" class="auth-input" placeholder="Create a password" required />
             </div>
-            <div class="auth-field">
-              <label class="auth-label">Role</label>
-              <RoleDropdown v-model="signupForm.role" />
-            </div>
-            <button type="submit" class="auth-submit">Create Account <i class="bi bi-rocket-takeoff-fill ms-2"></i></button>
+            <div v-if="authError" class="auth-error">{{ authError }}</div>
+            <button type="submit" class="auth-submit" :disabled="authLoading">
+              <span v-if="authLoading" class="spinner-border spinner-border-sm me-2"></span>
+              Create Account <i v-if="!authLoading" class="bi bi-rocket-takeoff-fill ms-2"></i>
+            </button>
           </form>
           <div class="auth-divider">
             <span>or continue with</span>
@@ -527,7 +527,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { store } from '../store/mockData';
-import RoleDropdown from './shared/RoleDropdown.vue';
+import * as api from '../api/auth';
 
 const router = useRouter();
 
@@ -539,9 +539,11 @@ const selectedWinner = ref(null);
 const selectedLab = ref(null);
 const lightboxImage = ref(null);
 const toast = ref('');
+const authLoading = ref(false);
+const authError = ref('');
 
-const loginForm = reactive({ email: '', password: '', role: 'student' });
-const signupForm = reactive({ name: '', email: '', password: '', confirmPassword: '', role: 'student' });
+const loginForm = reactive({ email: '', password: '' });
+const signupForm = reactive({ name: '', email: '', password: '' });
 
 const approvedEvents = computed(() => store.events.filter(e => e.status === 'Approved'));
 
@@ -550,33 +552,93 @@ const latestWinners = computed(() => store.eventWinners[0]);
 const showAuthModal = (type) => {
   authMode.value = type;
   activeModal.value = type;
+  authError.value = '';
   loginForm.email = '';
   loginForm.password = '';
   signupForm.name = '';
   signupForm.email = '';
   signupForm.password = '';
-  signupForm.confirmPassword = '';
 };
 
-const handleLogin = () => {
-  store.currentUserRole = loginForm.role;
-  activeModal.value = null;
-  toast.value = 'Welcome back! Redirecting to dashboard...';
-  setTimeout(() => { toast.value = ''; }, 3000);
+const switchAuthMode = (type) => {
+  authMode.value = type;
+  authError.value = '';
 };
 
-const handleSignup = () => {
-  store.currentUserRole = signupForm.role;
-  activeModal.value = null;
-  toast.value = 'Account created! Welcome to DRIVEN.';
-  setTimeout(() => { toast.value = ''; }, 3000);
+const roleHome = {
+  student: '/student-dashboard',
+  club_admin: '/clubAdmin-dashboard',
+  lab_admin: '/labAdmin-dashboard'
+};
+
+const formatAuthError = (err) => {
+  if (!err) return 'Something went wrong. Please try again.';
+  let msg = '';
+  if (typeof err === 'string') msg = err;
+  else if (typeof err.message === 'string' && err.message !== '[object Object]') msg = err.message;
+  else if (typeof err.detail === 'string') msg = err.detail;
+  else return 'Incorrect email or password. Please try again.';
+
+  if (msg.startsWith('String should have')) {
+    msg = `Password ${msg.slice(7)}`;
+  }
+  return msg;
+};
+
+const handleLogin = async () => {
+  authError.value = '';
+  authLoading.value = true;
+  try {
+    const { access_token } = await api.login(loginForm.email, loginForm.password);
+    const user = await api.me(access_token);
+    store.setAuth(access_token, user);
+    activeModal.value = null;
+    toast.value = `Welcome back, ${user.full_name}! Redirecting to your dashboard...`;
+    router.replace(roleHome[user.role] || '/home');
+  } catch (err) {
+    authError.value = formatAuthError(err);
+  } finally {
+    authLoading.value = false;
+  }
+};
+
+const handleSignup = async () => {
+  authError.value = '';
+  authLoading.value = true;
+  try {
+    const user = await api.register(signupForm.name, signupForm.email, signupForm.password);
+    const { access_token } = await api.login(signupForm.email, signupForm.password);
+    store.setAuth(access_token, user);
+    activeModal.value = null;
+    toast.value = `Account created! Welcome to DRIVEN, ${user.full_name}.`;
+    router.replace(roleHome[user.role] || '/home');
+  } catch (err) {
+    authError.value = formatAuthError(err);
+  } finally {
+    authLoading.value = false;
+  }
 };
 
 const handleOAuth = (provider) => {
-  store.currentUserRole = 'student';
-  activeModal.value = null;
-  toast.value = `Signed in with ${provider.charAt(0).toUpperCase() + provider.slice(1)}! Redirecting...`;
-  setTimeout(() => { toast.value = ''; }, 3000);
+  api.oauthLogin(provider);
+};
+
+const onOAuthMessage = async (event) => {
+  if (event.data && event.data.type === 'OAUTH_SUCCESS' && event.data.token) {
+    const token = event.data.token;
+    authLoading.value = true;
+    try {
+      const user = await api.me(token);
+      store.setAuth(token, user);
+      activeModal.value = null;
+      toast.value = `Welcome, ${user.full_name}! Redirecting to your dashboard...`;
+      router.replace(roleHome[user.role] || '/home');
+    } catch (err) {
+      authError.value = formatAuthError(err);
+    } finally {
+      authLoading.value = false;
+    }
+  }
 };
 
 const scrollTo = (id) => {
@@ -628,6 +690,7 @@ function animateCounters() {
 }
 
 onMounted(() => {
+  window.addEventListener('message', onOAuthMessage);
   window.addEventListener('scroll', () => { scrolled.value = window.scrollY > 50; }, { passive: true });
   initParticleCanvas();
   const el = heroRef.value;
@@ -661,6 +724,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  window.removeEventListener('message', onOAuthMessage);
   if (particleCleanup) particleCleanup();
   const el = heroRef.value;
   if (el) {

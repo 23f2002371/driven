@@ -148,7 +148,11 @@ def read_me(current_user: CurrentUser) -> User:
 @router.get("/google/login")
 async def google_login(request: Request) -> RedirectResponse:
     """OAuth redirect: send the user to Google's consent screen."""
-    redirect_uri = f"{settings.BACKEND_URL}{settings.API_STR}/auth/google/callback"
+    # Build the callback URL from the incoming request so it always points at
+    # the same host that started the flow (OAuth `state` lives in a cookie on
+    # that host). Using settings.BACKEND_URL here breaks when it is unset or
+    # differs from the host users actually reach.
+    redirect_uri = str(request.url_for("google_callback"))
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
@@ -180,7 +184,8 @@ async def google_callback(request: Request, db: DbSession) -> RedirectResponse:
 @router.get("/github/login")
 async def github_login(request: Request) -> RedirectResponse:
     """OAuth redirect: send the user to GitHub's consent screen."""
-    redirect_uri = f"{settings.BACKEND_URL}{settings.API_STR}/auth/github/callback"
+    # Same rationale as google_login: derive the callback from the request host.
+    redirect_uri = str(request.url_for("github_callback"))
     return await oauth.github.authorize_redirect(request, redirect_uri)
 
 
