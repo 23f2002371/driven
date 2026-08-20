@@ -18,7 +18,7 @@
             <span v-if="clubNotifCount > 0" class="navbar-badge">{{ clubNotifCount > 99 ? '99+' : clubNotifCount }}</span>
           </button>
           <span class="navbar-role">Club Lead</span>
-          <div class="navbar-avatar">CA</div>
+          <div class="navbar-avatar">{{ adminInitials }}</div>
         </div>
       </nav>
 
@@ -475,6 +475,12 @@ const currentTabTitle = computed(() => {
 
 const clubNotifs = computed(() => store.notifications.filter(n => n.role === 'club_admin'));
 const clubNotifCount = computed(() => clubNotifs.value.filter(n => !n.read).length);
+
+const adminInitials = computed(() => {
+  const name = store.currentUser?.full_name || 'Club Admin';
+  const parts = name.trim().split(/\s+/);
+  return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+});
 
 const categories = ['Workshop', 'Hackathon', 'Seminar', 'Competition', 'Bootcamp', 'Webinar'];
 const venues = ['Lab A', 'Lab B', 'Auditorium', 'Seminar Hall', 'Innovation Lab', 'Robotics Lab'];

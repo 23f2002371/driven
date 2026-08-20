@@ -16,7 +16,7 @@
           <button class="std-icon-btn"><i class="bi bi-search"></i></button>
           <button class="std-icon-btn" @click="goToNotifications"><i class="bi bi-bell"></i><span v-if="studentNotifCount > 0" class="std-badge">{{ studentNotifCount > 99 ? '99+' : studentNotifCount }}</span></button>
           <span class="std-role-badge">Student Member</span>
-          <div class="std-avatar">AS</div>
+          <div class="std-avatar">{{ userInitials }}</div>
         </div>
       </nav>
 
@@ -433,6 +433,12 @@ const filteredCerts = computed(() => {
 const studentNotifs = computed(() => store.notifications.filter(n => n.role === 'student'));
 const studentNotifCount = computed(() => studentNotifs.value.filter(n => !n.read).length);
 
+const userInitials = computed(() => {
+  const name = store.currentUser?.full_name || store.studentProfile?.fullName || 'Student';
+  const parts = name.trim().split(/\s+/);
+  return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+});
+
 const navItems = computed(() => [
   { label: 'Dashboard', icon: 'bar-chart-fill', key: 'dashboard' },
   { label: 'Browse Events', icon: 'calendar-event-fill', key: 'events' },
@@ -456,7 +462,8 @@ const approvedEvents = computed(() => store.events.filter(e => e.status === 'App
 const ongoingEvents = computed(() => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  return approvedEvents.value.filter(e => new Date(e.date) >= today);
+  const upcoming = approvedEvents.value.filter(e => new Date(e.date) >= today);
+  return upcoming.length > 0 ? upcoming : approvedEvents.value;
 });
 
 const assignedVolunteerWork = computed(() =>
