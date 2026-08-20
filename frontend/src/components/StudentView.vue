@@ -461,12 +461,7 @@ const myBorrowedItems = reactive({});
 const selectedEvent = ref(null);
 
 const approvedEvents = computed(() => store.events.filter(e => e.status === 'Approved'));
-const ongoingEvents = computed(() => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const upcoming = approvedEvents.value.filter(e => new Date(e.date) >= today);
-  return upcoming.length > 0 ? upcoming : approvedEvents.value;
-});
+const ongoingEvents = computed(() => approvedEvents.value);
 
 const assignedVolunteerWork = computed(() =>
   store.volunteerApplications.filter(a => a.assignedTask && (a.status === 'accepted' || a.status === 'completed'))
