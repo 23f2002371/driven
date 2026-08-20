@@ -470,7 +470,7 @@
             </div>
             <div class="auth-field">
               <label class="auth-label">Password</label>
-              <input v-model="loginForm.password" type="password" class="auth-input" placeholder="Enter your password" required />
+              <input v-model="loginForm.password" type="password" class="auth-input" placeholder="Enter your password" minlength="6" required />
             </div>
             <div v-if="authError" class="auth-error">{{ authError }}</div>
             <div class="auth-forgot">
@@ -492,7 +492,7 @@
             </div>
             <div class="auth-field">
               <label class="auth-label">Password</label>
-              <input v-model="signupForm.password" type="password" class="auth-input" placeholder="Create a password" required />
+              <input v-model="signupForm.password" type="password" class="auth-input" placeholder="Create a password (min 6 chars)" minlength="6" required />
             </div>
             <div v-if="authError" class="auth-error">{{ authError }}</div>
             <button type="submit" class="auth-submit" :disabled="authLoading">
@@ -604,6 +604,10 @@ const handleLogin = async () => {
 
 const handleSignup = async () => {
   authError.value = '';
+  if (signupForm.password.length < 6) {
+    authError.value = 'Password must be at least 6 characters long.';
+    return;
+  }
   authLoading.value = true;
   try {
     const user = await api.register(signupForm.name, signupForm.email, signupForm.password);

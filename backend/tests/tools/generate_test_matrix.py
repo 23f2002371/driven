@@ -75,12 +75,12 @@ TESTS: dict[str, dict[str, str]] = {
     },
     "test_register_short_password": {
         "id": "AUTH-005",
-        "description": "Register with a password shorter than 8 chars",
+        "description": "Register with a password shorter than 6 chars",
         "api": "POST /api/auth/register",
         "inputs": "password='short'",
         "expected": _out(
             "Status: 422 Unprocessable Entity",
-            "Message: password must be at least 8 characters",
+            "Message: password must be at least 6 characters",
         ),
     },
     "test_register_missing_credentials_variants": {
@@ -147,7 +147,7 @@ TESTS: dict[str, dict[str, str]] = {
         "id": "AUTH-017",
         "description": "Register password at exact min/max lengths",
         "api": "POST /api/auth/register",
-        "inputs": "password length 8 and 72",
+        "inputs": "password length 6 and 72",
         "expected": _out(
             "Status: 201 Created",
             "boundary lengths accepted",

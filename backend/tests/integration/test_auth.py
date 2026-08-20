@@ -255,7 +255,7 @@ def test_register_duplicate_email_different_case(client: TestClient) -> None:
 @pytest.mark.parametrize(
     "password",
     [
-        "12345678",  # exactly at the minimum length (8)
+        "123456",  # exactly at the minimum length (6)
         "a" * 72,  # exactly at the maximum length (72 = bcrypt safe limit)
     ],
 )
@@ -445,7 +445,7 @@ def test_register_concurrent_duplicate(client: TestClient) -> None:
 
 # -------------------------------------------------------- Login edge cases
 def test_login_empty_password(client: TestClient, db_session: Session) -> None:
-    # Empty password violates min_length=8 on UserLogin.
+    # Empty password violates min_length=6 on UserLogin.
     response = client.post(f"{API}/login", json={"email": "jane@example.com", "password": ""})
 
     assert response.status_code == 422
