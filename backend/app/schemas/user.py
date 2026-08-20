@@ -14,7 +14,7 @@ class UserCreate(BaseModel):
 
     full_name: str = Field(min_length=1, max_length=100)
     email: EmailStr = Field(max_length=150)
-    password: str = Field(min_length=8, max_length=72)
+    password: str = Field(min_length=6, max_length=72)
 
     @field_validator("full_name")
     @classmethod
@@ -48,7 +48,7 @@ class UserLogin(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     email: EmailStr = Field(max_length=150)
-    password: str = Field(min_length=8, max_length=72)
+    password: str = Field(min_length=6, max_length=72)
 
 
 class UserResponse(BaseModel):
