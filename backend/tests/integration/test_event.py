@@ -6,6 +6,7 @@ Each test is self-contained and creates its own data via the API or the
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, date, datetime
 
 from fastapi.testclient import TestClient
@@ -33,10 +34,9 @@ def _valid_event_payload(**overrides: object) -> dict:
         "venue": "seminar_hall",
         "max_participants": 40,
         "description": "Full-day workshop covering AI fundamentals.",
-        "cover_image_url": "https://example.com/cover.png",
-        "agendas": [],
-        "additional_info": [],
-        "mentors": [],
+        "agendas": "[]",
+        "additional_info": "[]",
+        "mentors": "[]",
     }
     payload.update(overrides)
     return payload
@@ -138,11 +138,12 @@ def _registration_payload(
 
 # ---------------------------------------------------------------- POST /events
 def test_create_event_as_club_admin(
-    client: TestClient, club_admin: User
+    client: TestClient, club_admin: User, db_session: Session
 ) -> None:
+    """1. Event creation WITHOUT a cover image succeeds, cover_image_url is None."""
     response = client.post(
         f"{API}",
-        json=_valid_event_payload(),
+        data=_valid_event_payload(),
         headers=auth_headers(club_admin),
     )
 
@@ -150,12 +151,214 @@ def test_create_event_as_club_admin(
     body = response.json()
     assert body["name"] == "Intro to AI Workshop"
     assert body["status"] == "pending"
+    assert body["cover_image_url"] is None
+
+    # Verify persisted in database with null cover_image_url
+    event = db_session.scalar(select(Event).where(Event.id == uuid.UUID(body["id"])))
+    assert event is not None
+    assert event.cover_image_url is None
+
+
+def test_create_event_with_valid_jpeg_image_success(
+    client: TestClient, club_admin: User, db_session: Session, monkeypatch
+) -> None:
+    """2. Event creation WITH a valid JPEG image uploads to Cloudinary and saves secure_url."""
+    mock_url = "https://res.cloudinary.com/test-cloud/image/upload/v12345/club-management/events/event_cover.jpg"
+    upload_called = False
+
+    async def fake_upload(file, folder="club-management/events"):
+        nonlocal upload_called
+        upload_called = True
+        assert folder == "club-management/events"
+        return mock_url
+
+    monkeypatch.setattr("app.api.routes.event.upload_image_to_cloudinary", fake_upload)
+
+    payload = _valid_event_payload(name="JPEG Workshop")
+    files = {"cover_image": ("cover.jpg", b"\xff\xd8\xff\xe0fake_jpeg_content", "image/jpeg")}
+
+    response = client.post(
+        f"{API}",
+        data=payload,
+        files=files,
+        headers=auth_headers(club_admin),
+    )
+
+    assert response.status_code == 201
+    assert upload_called is True
+    body = response.json()
+    assert body["cover_image_url"] == mock_url
+
+    # Verify persisted in database
+    event = db_session.scalar(select(Event).where(Event.id == uuid.UUID(body["id"])))
+    assert event is not None
+    assert event.cover_image_url == mock_url
+
+
+def test_create_event_with_valid_png_image_success(
+    client: TestClient, club_admin: User, db_session: Session, monkeypatch
+) -> None:
+    """3. Event creation WITH a valid PNG image uploads to Cloudinary and saves secure_url."""
+    mock_url = "https://res.cloudinary.com/test-cloud/image/upload/v12345/club-management/events/event_cover.png"
+
+    async def fake_upload(file, folder="club-management/events"):
+        return mock_url
+
+    monkeypatch.setattr("app.api.routes.event.upload_image_to_cloudinary", fake_upload)
+
+    payload = _valid_event_payload(name="PNG Workshop")
+    files = {"cover_image": ("banner.png", b"\x89PNG\r\n\x1a\nfake_png_data", "image/png")}
+
+    response = client.post(
+        f"{API}",
+        data=payload,
+        files=files,
+        headers=auth_headers(club_admin),
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["cover_image_url"] == mock_url
+
+
+def test_create_event_with_valid_webp_image_success(
+    client: TestClient, club_admin: User, db_session: Session, monkeypatch
+) -> None:
+    """4. Event creation WITH a valid WebP image uploads to Cloudinary and saves secure_url."""
+    mock_url = "https://res.cloudinary.com/test-cloud/image/upload/v12345/club-management/events/event_cover.webp"
+
+    async def fake_upload(file, folder="club-management/events"):
+        return mock_url
+
+    monkeypatch.setattr("app.api.routes.event.upload_image_to_cloudinary", fake_upload)
+
+    payload = _valid_event_payload(name="WebP Workshop")
+    files = {"cover_image": ("banner.webp", b"RIFF....WEBPfake_webp_data", "image/webp")}
+
+    response = client.post(
+        f"{API}",
+        data=payload,
+        files=files,
+        headers=auth_headers(club_admin),
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["cover_image_url"] == mock_url
+
+
+def test_create_event_invalid_image_type_rejected(
+    client: TestClient, club_admin: User, db_session: Session
+) -> None:
+    """5. Unsupported image type (e.g. image/gif) is rejected with 400 and event is not saved."""
+    payload = _valid_event_payload(name="Invalid Type Event")
+    files = {"cover_image": ("animation.gif", b"GIF89afake_gif_data", "image/gif")}
+
+    response = client.post(
+        f"{API}",
+        data=payload,
+        files=files,
+        headers=auth_headers(club_admin),
+    )
+
+    assert response.status_code == 400
+    assert "Unsupported image type" in response.json()["detail"]
+
+    # Verify event was NOT created
+    event = db_session.scalar(select(Event).where(Event.name == "Invalid Type Event"))
+    assert event is None
+
+
+def test_create_event_image_exceeds_5mb_rejected(
+    client: TestClient, club_admin: User, db_session: Session
+) -> None:
+    """6. Image larger than 5 MB is rejected with 400 and event is not saved."""
+    payload = _valid_event_payload(name="Huge Image Event")
+    large_content = b"0" * (5 * 1024 * 1024 + 1)
+    files = {"cover_image": ("huge.jpg", large_content, "image/jpeg")}
+
+    response = client.post(
+        f"{API}",
+        data=payload,
+        files=files,
+        headers=auth_headers(club_admin),
+    )
+
+    assert response.status_code == 400
+    assert "exceeds maximum limit" in response.json()["detail"]
+
+    # Verify event was NOT created
+    event = db_session.scalar(select(Event).where(Event.name == "Huge Image Event"))
+    assert event is None
+
+
+def test_create_event_cloudinary_failure_rollback(
+    client: TestClient, club_admin: User, db_session: Session, monkeypatch
+) -> None:
+    """7 & 8. Cloudinary failure returns 500 and ensures upload happens before DB write."""
+    from fastapi import HTTPException
+
+    async def failing_upload(file, folder="club-management/events"):
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to upload image to Cloudinary: Network timeout",
+        )
+
+    monkeypatch.setattr("app.api.routes.event.upload_image_to_cloudinary", failing_upload)
+
+    payload = _valid_event_payload(name="Failing Cloudinary Event")
+    files = {"cover_image": ("cover.jpg", b"fake_jpeg", "image/jpeg")}
+
+    response = client.post(
+        f"{API}",
+        data=payload,
+        files=files,
+        headers=auth_headers(club_admin),
+    )
+
+    assert response.status_code == 500
+    assert "Failed to upload image to Cloudinary" in response.json()["detail"]
+
+    # Verify event was NOT created/persisted in database
+    event = db_session.scalar(select(Event).where(Event.name == "Failing Cloudinary Event"))
+    assert event is None
+
+
+def test_create_event_stored_url_is_not_base64_or_local(
+    client: TestClient, club_admin: User, db_session: Session, monkeypatch
+) -> None:
+    """9. Confirm stored cover_image_url is the Cloudinary secure_url and never Base64 or local file path."""
+    cloudinary_url = "https://res.cloudinary.com/demo/image/upload/v12345/events/test.jpg"
+
+    async def fake_upload(file, folder="club-management/events"):
+        return cloudinary_url
+
+    monkeypatch.setattr("app.api.routes.event.upload_image_to_cloudinary", fake_upload)
+
+    payload = _valid_event_payload(name="Clean URL Event")
+    files = {"cover_image": ("test.jpg", b"jpeg_content", "image/jpeg")}
+
+    response = client.post(
+        f"{API}",
+        data=payload,
+        files=files,
+        headers=auth_headers(club_admin),
+    )
+
+    assert response.status_code == 201
+    event = db_session.scalar(select(Event).where(Event.name == "Clean URL Event"))
+    assert event is not None
+    assert event.cover_image_url == cloudinary_url
+    assert not event.cover_image_url.startswith("data:image/")
+    assert not event.cover_image_url.startswith("blob:")
+    assert not event.cover_image_url.startswith("file://")
+    assert not event.cover_image_url.startswith("C:")
 
 
 def test_create_event_as_student_forbidden(client: TestClient, student: User) -> None:
     response = client.post(
         f"{API}",
-        json=_valid_event_payload(),
+        data=_valid_event_payload(),
         headers=auth_headers(student),
     )
 
@@ -165,7 +368,7 @@ def test_create_event_as_student_forbidden(client: TestClient, student: User) ->
 def test_create_event_invalid_payload(client: TestClient, club_admin: User) -> None:
     response = client.post(
         f"{API}",
-        json=_valid_event_payload(max_participants=0),
+        data=_valid_event_payload(max_participants=0),
         headers=auth_headers(club_admin),
     )
 
@@ -178,13 +381,13 @@ def test_create_event_missing_required_field(
     payload = _valid_event_payload()
     del payload["description"]
 
-    response = client.post(f"{API}", json=payload, headers=auth_headers(club_admin))
+    response = client.post(f"{API}", data=payload, headers=auth_headers(club_admin))
 
     assert response.status_code == 422
 
 
 def test_create_event_unauthenticated(client: TestClient) -> None:
-    response = client.post(f"{API}", json=_valid_event_payload())
+    response = client.post(f"{API}", data=_valid_event_payload())
 
     assert response.status_code == 401
 
