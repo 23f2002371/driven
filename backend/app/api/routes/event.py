@@ -183,8 +183,31 @@ def _student_profile(student: Student) -> StudentProfile:
     )
 
 
+def _public_event_response(event: Event) -> EventResponse:
+    """Build the public event representation for a registration response."""
+    winner = next(
+        (w for w in event.winners if w.position == WinnerPosition.FIRST),
+        event.winners[0] if event.winners else None,
+    )
+
+    return EventResponse(
+        id=event.id,
+        name=event.name,
+        short_description=event.short_description,
+        category=event.category,
+        event_date=event.event_date,
+        venue=event.venue,
+        max_participants=event.max_participants,
+        description=event.description,
+        cover_image_url=event.cover_image_url,
+        winner_name=winner.project_name if winner else None,
+        winner_project_url=winner.project_url if winner else None,
+    )
+
+
 def _registration_response(registration: EventRegistration) -> EventRegistrationResponse:
-    """Build the full registration response, embedding the student information."""
+    """Build the full registration response, embedding the student information
+    and the public event details."""
     return EventRegistrationResponse(
         id=registration.id,
         event_id=registration.event_id,
@@ -194,17 +217,20 @@ def _registration_response(registration: EventRegistration) -> EventRegistration
         registration_status=registration.registration_status,
         attendance_status=registration.attendance_status,
         student=_student_profile(registration.student),
+        event=_public_event_response(registration.event),
     )
 
 
 def _registration_eager_loads():
-    """Eager-load the nested student profile for registration responses."""
+    """Eager-load the nested student profile and public event details for
+    registration responses."""
     return [
         selectinload(EventRegistration.student).selectinload(Student.domains)
         .selectinload(StudentDomain.technologies)
         .selectinload(StudentTechnology.technology),
         selectinload(EventRegistration.student).selectinload(Student.domains)
         .selectinload(StudentDomain.domain),
+        selectinload(EventRegistration.event).selectinload(Event.winners),
     ]
 
 
@@ -333,24 +359,7 @@ def get_public_event(event_id: uuid.UUID, db: DbSession) -> EventResponse:
             detail="Event not found",
         )
 
-    winner = next(
-        (w for w in event.winners if w.position == WinnerPosition.FIRST),
-        event.winners[0] if event.winners else None,
-    )
-
-    return EventResponse(
-        id=event.id,
-        name=event.name,
-        short_description=event.short_description,
-        category=event.category,
-        event_date=event.event_date,
-        venue=event.venue,
-        max_participants=event.max_participants,
-        description=event.description,
-        cover_image_url=event.cover_image_url,
-        winner_name=winner.project_name if winner else None,
-        winner_project_url=winner.project_url if winner else None,
-    )
+    return _public_event_response(event)
 
 
 @router.get("/events/{event_id}/private", response_model=PrivateEventResponse)
