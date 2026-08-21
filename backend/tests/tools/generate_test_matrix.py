@@ -512,14 +512,88 @@ TESTS: dict[str, dict[str, str]] = {
     },
     "test_create_event_as_club_admin": {
         "id": "EVENT-001",
-        "description": "Club admin creates an event",
+        "description": "Club admin creates an event without cover image",
         "api": "POST /api/events",
-        "inputs": "valid EventCreate payload (status not set)",
+        "inputs": "valid EventCreate form data (no cover image)",
         "expected": _out(
             "Status: 201 Created",
             "name: 'Intro to AI Workshop'",
             "status: 'pending'",
-            "Message: event created successfully",
+            "cover_image_url: null",
+        ),
+    },
+    "test_create_event_with_valid_jpeg_image_success": {
+        "id": "EVENT-IMG-001",
+        "description": "Create event with valid JPEG cover image",
+        "api": "POST /api/events",
+        "inputs": "multipart/form-data with valid JPEG file",
+        "expected": _out(
+            "Status: 201 Created",
+            "Cloudinary upload called",
+            "cover_image_url: secure_url saved",
+        ),
+    },
+    "test_create_event_with_valid_png_image_success": {
+        "id": "EVENT-IMG-002",
+        "description": "Create event with valid PNG cover image",
+        "api": "POST /api/events",
+        "inputs": "multipart/form-data with valid PNG file",
+        "expected": _out(
+            "Status: 201 Created",
+            "cover_image_url: secure_url saved",
+        ),
+    },
+    "test_create_event_with_valid_webp_image_success": {
+        "id": "EVENT-IMG-003",
+        "description": "Create event with valid WebP cover image",
+        "api": "POST /api/events",
+        "inputs": "multipart/form-data with valid WebP file",
+        "expected": _out(
+            "Status: 201 Created",
+            "cover_image_url: secure_url saved",
+        ),
+    },
+    "test_create_event_invalid_image_type_rejected": {
+        "id": "EVENT-IMG-004",
+        "description": "Reject unsupported cover image MIME type",
+        "api": "POST /api/events",
+        "inputs": "multipart/form-data with image/gif file",
+        "expected": _out(
+            "Status: 400 Bad Request",
+            "detail: Unsupported image type",
+            "Event not created in DB",
+        ),
+    },
+    "test_create_event_image_exceeds_5mb_rejected": {
+        "id": "EVENT-IMG-005",
+        "description": "Reject cover image exceeding 5MB limit",
+        "api": "POST /api/events",
+        "inputs": "multipart/form-data with >5MB file",
+        "expected": _out(
+            "Status: 400 Bad Request",
+            "detail: Image size exceeds maximum limit",
+            "Event not created in DB",
+        ),
+    },
+    "test_create_event_cloudinary_failure_rollback": {
+        "id": "EVENT-IMG-006",
+        "description": "Cloudinary failure returns 500 and prevents DB save",
+        "api": "POST /api/events",
+        "inputs": "multipart/form-data, Cloudinary upload failure",
+        "expected": _out(
+            "Status: 500 Internal Server Error",
+            "Event not created/persisted in DB",
+        ),
+    },
+    "test_create_event_stored_url_is_not_base64_or_local": {
+        "id": "EVENT-IMG-007",
+        "description": "Stored cover_image_url is strictly Cloudinary secure_url",
+        "api": "POST /api/events",
+        "inputs": "multipart/form-data with cover image",
+        "expected": _out(
+            "Status: 201 Created",
+            "cover_image_url is https://res.cloudinary.com/...",
+            "Not Base64, blob:, or local path",
         ),
     },
     "test_create_event_as_student_forbidden": {
