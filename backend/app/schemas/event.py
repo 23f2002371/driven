@@ -20,6 +20,8 @@ from app.utils.enums import (
     WinnerPosition,
 )
 
+
+# ------------------------------------------------- Nested child items
 class AgendaItem(BaseModel):
     """A single time-boxed agenda entry embedded in an event payload."""
 
@@ -210,7 +212,8 @@ class EventRegistrationUpdate(BaseModel):
 
 class EventRegistrationResponse(BaseModel):
     """Representation of an event registration including the submitted
-    student information and the administrative statuses."""
+    student information, the administrative statuses and the public
+    event details."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -222,6 +225,7 @@ class EventRegistrationResponse(BaseModel):
     registration_status: RegistrationStatus
     attendance_status: AttendanceStatus
     student: StudentProfile
+    event: EventResponse
 
 
 # -------------------------------------------------------------- Winner
