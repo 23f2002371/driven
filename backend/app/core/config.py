@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     BACKEND_URL: str = "http://localhost:8000"
     FRONTEND_URL: str = "http://localhost:5173"
 
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:
