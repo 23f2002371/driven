@@ -49,7 +49,7 @@ export const store = reactive({
     { id: 3, name: 'Python Bootcamp', date: 'Jul 28, 2026', venue: 'Lab B', status: 'Approved', participants: 30, description: 'Introductory Python session covering data structures and algorithms.', image: 'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=600&h=400&fit=crop', deadline: 'Jul 20, 2026' },
     { id: 4, name: 'AI/ML Seminar', date: 'Jul 25, 2026', venue: 'Seminar Hall', status: 'Pending', participants: 60, description: 'Deep dive into neural networks and transformer architectures.', image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=600&h=400&fit=crop', deadline: 'Jul 20, 2026' },
     { id: 5, name: 'Web3 Hack Night', date: 'Aug 5, 2026', venue: 'Innovation Lab', status: 'Approved', participants: 50, description: 'Build dApps on Ethereum and explore Solidity fundamentals.', image: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=600&h=400&fit=crop', deadline: 'Aug 3, 2026' },
-    { id: 6, name: 'Drone Workshop', date: 'Aug 22, 2026', venue: 'Robotics Lab', status: 'Approved', participants: 25, description: 'Build and fly your own drone from scratch.', image: 'https://images.unsplash.com/photo-1508614589041-895f88991d0c?w=600&h=400&fit=crop', deadline: 'Aug 21, 2026' },
+    { id: 6, name: 'Drone Workshop', date: 'Aug 12, 2026', venue: 'Robotics Lab', status: 'Approved', participants: 25, description: 'Build and fly your own drone from scratch.', image: 'https://images.unsplash.com/photo-1508614589041-895f88991d0c?w=600&h=400&fit=crop', deadline: 'Aug 10, 2026' },
   ],
 
   inventory: [

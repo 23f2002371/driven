@@ -288,6 +288,14 @@ def test_create_registration_uses_submitted_student_profile(
             "technologies": [{"technology": "REACT"}],
         }
     ]
+    assert body["event"]["id"] == str(event.id)
+    assert body["event"]["name"] == event.name
+    assert body["event"]["short_description"] == event.short_description
+    assert body["event"]["event_date"] == "2026-11-01"
+    assert body["event"]["venue"] == "auditorium"
+    assert body["event"]["winner_name"] is None
+    assert body["event"]["winner_project_url"] is None
+    assert "status" not in body["event"]
 
 
 def test_create_registration_syncs_profile_to_student(
@@ -595,6 +603,9 @@ def test_get_registration_returns_embedded_student_profile(
     assert body["attendance_status"] == "absent"
     assert body["student"]["student_id"] == "CS0012"
     assert body["student"]["department"] == "computer_science"
+    assert body["event"]["name"] == event.name
+    assert body["event"]["category"] == "workshop"
+    assert body["event"]["max_participants"] == 30
 
 
 def test_get_other_students_registration_forbidden(
