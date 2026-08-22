@@ -6,18 +6,24 @@ Each test is self-contained and creates its own data via the API or the
 
 from __future__ import annotations
 
-import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash
-from app.models.event import Event, EventRegistration, EventWinner
+from app.models.event import (
+    AdditionalEventInfo,
+    Event,
+    EventAgenda,
+    EventMentor,
+    EventRegistration,
+    EventWinner,
+)
 from app.models.student import Student
 from app.models.user import User
-from app.utils.enums import Department, UserRole, WinnerPosition
+from app.utils.enums import Department, EventStatus, AdditionalInfoType, UserRole, WinnerPosition
 from tests.conftest import auth_headers
 
 API = "/api/events"
@@ -34,9 +40,10 @@ def _valid_event_payload(**overrides: object) -> dict:
         "venue": "seminar_hall",
         "max_participants": 40,
         "description": "Full-day workshop covering AI fundamentals.",
-        "agendas": "[]",
-        "additional_info": "[]",
-        "mentors": "[]",
+        "cover_image_url": "https://example.com/cover.png",
+        "agendas": [],
+        "additional_info": [],
+        "mentors": [],
     }
     payload.update(overrides)
     return payload
@@ -138,12 +145,11 @@ def _registration_payload(
 
 # ---------------------------------------------------------------- POST /events
 def test_create_event_as_club_admin(
-    client: TestClient, club_admin: User, db_session: Session
+    client: TestClient, club_admin: User
 ) -> None:
-    """1. Event creation WITHOUT a cover image succeeds, cover_image_url is None."""
     response = client.post(
         f"{API}",
-        data=_valid_event_payload(),
+        json=_valid_event_payload(),
         headers=auth_headers(club_admin),
     )
 
@@ -151,214 +157,12 @@ def test_create_event_as_club_admin(
     body = response.json()
     assert body["name"] == "Intro to AI Workshop"
     assert body["status"] == "pending"
-    assert body["cover_image_url"] is None
-
-    # Verify persisted in database with null cover_image_url
-    event = db_session.scalar(select(Event).where(Event.id == uuid.UUID(body["id"])))
-    assert event is not None
-    assert event.cover_image_url is None
-
-
-def test_create_event_with_valid_jpeg_image_success(
-    client: TestClient, club_admin: User, db_session: Session, monkeypatch
-) -> None:
-    """2. Event creation WITH a valid JPEG image uploads to Cloudinary and saves secure_url."""
-    mock_url = "https://res.cloudinary.com/test-cloud/image/upload/v12345/club-management/events/event_cover.jpg"
-    upload_called = False
-
-    async def fake_upload(file, folder="club-management/events"):
-        nonlocal upload_called
-        upload_called = True
-        assert folder == "club-management/events"
-        return mock_url
-
-    monkeypatch.setattr("app.api.routes.event.upload_image_to_cloudinary", fake_upload)
-
-    payload = _valid_event_payload(name="JPEG Workshop")
-    files = {"cover_image": ("cover.jpg", b"\xff\xd8\xff\xe0fake_jpeg_content", "image/jpeg")}
-
-    response = client.post(
-        f"{API}",
-        data=payload,
-        files=files,
-        headers=auth_headers(club_admin),
-    )
-
-    assert response.status_code == 201
-    assert upload_called is True
-    body = response.json()
-    assert body["cover_image_url"] == mock_url
-
-    # Verify persisted in database
-    event = db_session.scalar(select(Event).where(Event.id == uuid.UUID(body["id"])))
-    assert event is not None
-    assert event.cover_image_url == mock_url
-
-
-def test_create_event_with_valid_png_image_success(
-    client: TestClient, club_admin: User, db_session: Session, monkeypatch
-) -> None:
-    """3. Event creation WITH a valid PNG image uploads to Cloudinary and saves secure_url."""
-    mock_url = "https://res.cloudinary.com/test-cloud/image/upload/v12345/club-management/events/event_cover.png"
-
-    async def fake_upload(file, folder="club-management/events"):
-        return mock_url
-
-    monkeypatch.setattr("app.api.routes.event.upload_image_to_cloudinary", fake_upload)
-
-    payload = _valid_event_payload(name="PNG Workshop")
-    files = {"cover_image": ("banner.png", b"\x89PNG\r\n\x1a\nfake_png_data", "image/png")}
-
-    response = client.post(
-        f"{API}",
-        data=payload,
-        files=files,
-        headers=auth_headers(club_admin),
-    )
-
-    assert response.status_code == 201
-    body = response.json()
-    assert body["cover_image_url"] == mock_url
-
-
-def test_create_event_with_valid_webp_image_success(
-    client: TestClient, club_admin: User, db_session: Session, monkeypatch
-) -> None:
-    """4. Event creation WITH a valid WebP image uploads to Cloudinary and saves secure_url."""
-    mock_url = "https://res.cloudinary.com/test-cloud/image/upload/v12345/club-management/events/event_cover.webp"
-
-    async def fake_upload(file, folder="club-management/events"):
-        return mock_url
-
-    monkeypatch.setattr("app.api.routes.event.upload_image_to_cloudinary", fake_upload)
-
-    payload = _valid_event_payload(name="WebP Workshop")
-    files = {"cover_image": ("banner.webp", b"RIFF....WEBPfake_webp_data", "image/webp")}
-
-    response = client.post(
-        f"{API}",
-        data=payload,
-        files=files,
-        headers=auth_headers(club_admin),
-    )
-
-    assert response.status_code == 201
-    body = response.json()
-    assert body["cover_image_url"] == mock_url
-
-
-def test_create_event_invalid_image_type_rejected(
-    client: TestClient, club_admin: User, db_session: Session
-) -> None:
-    """5. Unsupported image type (e.g. image/gif) is rejected with 400 and event is not saved."""
-    payload = _valid_event_payload(name="Invalid Type Event")
-    files = {"cover_image": ("animation.gif", b"GIF89afake_gif_data", "image/gif")}
-
-    response = client.post(
-        f"{API}",
-        data=payload,
-        files=files,
-        headers=auth_headers(club_admin),
-    )
-
-    assert response.status_code == 400
-    assert "Unsupported image type" in response.json()["detail"]
-
-    # Verify event was NOT created
-    event = db_session.scalar(select(Event).where(Event.name == "Invalid Type Event"))
-    assert event is None
-
-
-def test_create_event_image_exceeds_5mb_rejected(
-    client: TestClient, club_admin: User, db_session: Session
-) -> None:
-    """6. Image larger than 5 MB is rejected with 400 and event is not saved."""
-    payload = _valid_event_payload(name="Huge Image Event")
-    large_content = b"0" * (5 * 1024 * 1024 + 1)
-    files = {"cover_image": ("huge.jpg", large_content, "image/jpeg")}
-
-    response = client.post(
-        f"{API}",
-        data=payload,
-        files=files,
-        headers=auth_headers(club_admin),
-    )
-
-    assert response.status_code == 400
-    assert "exceeds maximum limit" in response.json()["detail"]
-
-    # Verify event was NOT created
-    event = db_session.scalar(select(Event).where(Event.name == "Huge Image Event"))
-    assert event is None
-
-
-def test_create_event_cloudinary_failure_rollback(
-    client: TestClient, club_admin: User, db_session: Session, monkeypatch
-) -> None:
-    """7 & 8. Cloudinary failure returns 500 and ensures upload happens before DB write."""
-    from fastapi import HTTPException
-
-    async def failing_upload(file, folder="club-management/events"):
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to upload image to Cloudinary: Network timeout",
-        )
-
-    monkeypatch.setattr("app.api.routes.event.upload_image_to_cloudinary", failing_upload)
-
-    payload = _valid_event_payload(name="Failing Cloudinary Event")
-    files = {"cover_image": ("cover.jpg", b"fake_jpeg", "image/jpeg")}
-
-    response = client.post(
-        f"{API}",
-        data=payload,
-        files=files,
-        headers=auth_headers(club_admin),
-    )
-
-    assert response.status_code == 500
-    assert "Failed to upload image to Cloudinary" in response.json()["detail"]
-
-    # Verify event was NOT created/persisted in database
-    event = db_session.scalar(select(Event).where(Event.name == "Failing Cloudinary Event"))
-    assert event is None
-
-
-def test_create_event_stored_url_is_not_base64_or_local(
-    client: TestClient, club_admin: User, db_session: Session, monkeypatch
-) -> None:
-    """9. Confirm stored cover_image_url is the Cloudinary secure_url and never Base64 or local file path."""
-    cloudinary_url = "https://res.cloudinary.com/demo/image/upload/v12345/events/test.jpg"
-
-    async def fake_upload(file, folder="club-management/events"):
-        return cloudinary_url
-
-    monkeypatch.setattr("app.api.routes.event.upload_image_to_cloudinary", fake_upload)
-
-    payload = _valid_event_payload(name="Clean URL Event")
-    files = {"cover_image": ("test.jpg", b"jpeg_content", "image/jpeg")}
-
-    response = client.post(
-        f"{API}",
-        data=payload,
-        files=files,
-        headers=auth_headers(club_admin),
-    )
-
-    assert response.status_code == 201
-    event = db_session.scalar(select(Event).where(Event.name == "Clean URL Event"))
-    assert event is not None
-    assert event.cover_image_url == cloudinary_url
-    assert not event.cover_image_url.startswith("data:image/")
-    assert not event.cover_image_url.startswith("blob:")
-    assert not event.cover_image_url.startswith("file://")
-    assert not event.cover_image_url.startswith("C:")
 
 
 def test_create_event_as_student_forbidden(client: TestClient, student: User) -> None:
     response = client.post(
         f"{API}",
-        data=_valid_event_payload(),
+        json=_valid_event_payload(),
         headers=auth_headers(student),
     )
 
@@ -368,7 +172,7 @@ def test_create_event_as_student_forbidden(client: TestClient, student: User) ->
 def test_create_event_invalid_payload(client: TestClient, club_admin: User) -> None:
     response = client.post(
         f"{API}",
-        data=_valid_event_payload(max_participants=0),
+        json=_valid_event_payload(max_participants=0),
         headers=auth_headers(club_admin),
     )
 
@@ -381,13 +185,13 @@ def test_create_event_missing_required_field(
     payload = _valid_event_payload()
     del payload["description"]
 
-    response = client.post(f"{API}", data=payload, headers=auth_headers(club_admin))
+    response = client.post(f"{API}", json=payload, headers=auth_headers(club_admin))
 
     assert response.status_code == 422
 
 
 def test_create_event_unauthenticated(client: TestClient) -> None:
-    response = client.post(f"{API}", data=_valid_event_payload())
+    response = client.post(f"{API}", json=_valid_event_payload())
 
     assert response.status_code == 401
 
@@ -1372,3 +1176,174 @@ def test_get_student_certificates_as_admin_forbidden(
     )
 
     assert response.status_code == 403
+
+
+# ===========================================================================
+# Tests for list_public_events (GET /api/events)
+# ===========================================================================
+
+
+def test_list_public_events(client: TestClient, db_session: Session) -> None:
+    """Public events endpoint returns non-rejected events ordered by date."""
+    event1 = Event(
+        name="Public Event 1",
+        short_description="Short desc 1",
+        description="Full description for event 1",
+        category="workshop",
+        event_date=date(2026, 11, 10),
+        registration_deadline=datetime(2026, 11, 5, tzinfo=UTC),
+        venue="auditorium",
+        max_participants=50,
+        status=EventStatus.APPROVED,
+        cover_image_url="https://example.com/e1.jpg",
+    )
+    event2 = Event(
+        name="Public Event 2",
+        short_description="Short desc 2",
+        description="Full description for event 2",
+        category="hackathon",
+        event_date=date(2026, 12, 1),
+        registration_deadline=datetime(2026, 11, 25, tzinfo=UTC),
+        venue="lab_a",
+        max_participants=100,
+        status=EventStatus.PENDING,
+        cover_image_url="https://example.com/e2.jpg",
+    )
+    event_rejected = Event(
+        name="Rejected Event",
+        short_description="Short desc rej",
+        description="Full description for rejected event",
+        category="workshop",
+        event_date=date(2026, 10, 1),
+        registration_deadline=datetime(2026, 9, 25, tzinfo=UTC),
+        venue="lab_b",
+        max_participants=30,
+        status=EventStatus.REJECTED,
+    )
+    db_session.add_all([event1, event2, event_rejected])
+    db_session.commit()
+
+    response = client.get(API)
+    assert response.status_code == 200
+    body = response.json()
+    names = [e["name"] for e in body]
+    assert "Public Event 1" in names
+    assert "Public Event 2" in names
+    assert "Rejected Event" not in names
+    # Verify response schema fields
+    ev1 = next(e for e in body if e["name"] == "Public Event 1")
+    assert ev1["venue"] == "auditorium"
+    assert ev1["cover_image_url"] == "https://example.com/e1.jpg"
+    assert "winner_name" in ev1
+    assert "winner_project_url" in ev1
+
+
+def test_list_public_events_empty(client: TestClient, db_session: Session) -> None:
+    """Returns an empty list when no active events exist."""
+    response = client.get(API)
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+# ===========================================================================
+# Tests for list_private_events (GET /api/events/private)
+# ===========================================================================
+
+
+def test_list_private_events_as_admin(client: TestClient, db_session: Session) -> None:
+    """Admin can fetch all private events with eager-loaded child collections."""
+    admin = _create_admin(db_session, email="admin_private@example.com")
+    event = Event(
+        name="Full Workshop Event",
+        short_description="Short desc admin",
+        description="Full description for admin event",
+        category="workshop",
+        event_date=date(2026, 11, 15),
+        registration_deadline=datetime(2026, 11, 10, tzinfo=UTC),
+        venue="innovation_lab",
+        max_participants=60,
+        status=EventStatus.PENDING,
+    )
+    db_session.add(event)
+    db_session.flush()
+
+    agenda = EventAgenda(
+        event_id=event.id,
+        title="Opening Keynote",
+        description="Welcome speech",
+        start_time=time(9, 0),
+        end_time=time(10, 0),
+    )
+    mentor = EventMentor(
+        event_id=event.id,
+        name="Dr. Jane Doe",
+        designation="Lead Architect",
+        company="Tech Corp",
+        email="jane@example.com",
+    )
+    info = AdditionalEventInfo(
+        event_id=event.id,
+        section_type=AdditionalInfoType.LEARNING,
+        content="Master microservices design",
+    )
+    db_session.add_all([agenda, mentor, info])
+    db_session.commit()
+
+    response = client.get(f"{API}/private", headers=auth_headers(admin))
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) >= 1
+    target = next(e for e in body if e["id"] == str(event.id))
+    assert target["name"] == "Full Workshop Event"
+    assert len(target["agendas"]) == 1
+    assert target["agendas"][0]["title"] == "Opening Keynote"
+    assert len(target["mentors"]) == 1
+    assert target["mentors"][0]["name"] == "Dr. Jane Doe"
+    assert len(target["additional_info"]) == 1
+    assert target["additional_info"][0]["content"] == "Master microservices design"
+
+
+def test_list_private_events_as_student(
+    client: TestClient, db_session: Session
+) -> None:
+    """Student receives active private events and excludes rejected events."""
+    student = _create_student_user(db_session, email="student_private@example.com")
+    event_active = Event(
+        name="Active Student Event",
+        short_description="Active student event short desc",
+        description="Full description for active student event",
+        category="workshop",
+        event_date=date(2026, 11, 20),
+        registration_deadline=datetime(2026, 11, 15, tzinfo=UTC),
+        venue="seminar_hall",
+        max_participants=45,
+        status=EventStatus.APPROVED,
+    )
+    event_rejected = Event(
+        name="Cancelled Event",
+        short_description="Cancelled event short desc",
+        description="Full description for cancelled event",
+        category="workshop",
+        event_date=date(2026, 11, 25),
+        registration_deadline=datetime(2026, 11, 20, tzinfo=UTC),
+        venue="lab_a",
+        max_participants=20,
+        status=EventStatus.REJECTED,
+    )
+    db_session.add_all([event_active, event_rejected])
+    db_session.commit()
+
+    response = client.get(f"{API}/private", headers=auth_headers(student))
+    assert response.status_code == 200
+    body = response.json()
+    names = [e["name"] for e in body]
+    assert "Active Student Event" in names
+    assert "Cancelled Event" not in names
+
+
+def test_list_private_events_unauthenticated_fails(
+    client: TestClient, db_session: Session
+) -> None:
+    """Unauthenticated access to /events/private returns 401 Unauthorized."""
+    response = client.get(f"{API}/private")
+    assert response.status_code == 401
