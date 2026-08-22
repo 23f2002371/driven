@@ -1,4 +1,5 @@
 import { reactive } from 'vue';
+import { fetchEventsApi } from '../api/events';
 
 const clubs = [
   { name: 'TechNova', logo: 'TN', color: '#818cf8' },
@@ -43,14 +44,8 @@ export const store = reactive({
     emergencyPhone: '+91 98765 43211',
   },
 
-  events: [
-    { id: 1, name: 'IoT Workshop', date: 'Jul 15, 2026', venue: 'Lab A', status: 'Approved', participants: 45, description: 'Hands-on IoT building with Arduino sensors and microcontrollers.', image: 'https://images.unsplash.com/photo-1553408227-108e3f4edef1?w=600&h=400&fit=crop', deadline: 'Jul 10, 2026' },
-    { id: 2, name: 'Hackathon 2026', date: 'Jul 22, 2026', venue: 'Auditorium', status: 'Approved', participants: 120, description: 'Annual 24-hour coding contest with prizes worth ₹50k.', image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=600&h=400&fit=crop', deadline: 'Jul 18, 2026' },
-    { id: 3, name: 'Python Bootcamp', date: 'Jul 28, 2026', venue: 'Lab B', status: 'Approved', participants: 30, description: 'Introductory Python session covering data structures and algorithms.', image: 'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=600&h=400&fit=crop', deadline: 'Jul 20, 2026' },
-    { id: 4, name: 'AI/ML Seminar', date: 'Jul 25, 2026', venue: 'Seminar Hall', status: 'Pending', participants: 60, description: 'Deep dive into neural networks and transformer architectures.', image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=600&h=400&fit=crop', deadline: 'Jul 20, 2026' },
-    { id: 5, name: 'Web3 Hack Night', date: 'Aug 5, 2026', venue: 'Innovation Lab', status: 'Approved', participants: 50, description: 'Build dApps on Ethereum and explore Solidity fundamentals.', image: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=600&h=400&fit=crop', deadline: 'Aug 3, 2026' },
-    { id: 6, name: 'Drone Workshop', date: 'Aug 12, 2026', venue: 'Robotics Lab', status: 'Approved', participants: 25, description: 'Build and fly your own drone from scratch.', image: 'https://images.unsplash.com/photo-1508614589041-895f88991d0c?w=600&h=400&fit=crop', deadline: 'Aug 10, 2026' },
-  ],
+  events: [],
+  isLoadingEvents: false,
 
   inventory: [
     { id: 1, name: 'Arduino Uno', category: 'Microcontroller', available: 12, borrowed: 3, image: 'https://images.unsplash.com/photo-1553408227-108e3f4edef1?w=400&h=300&fit=crop', description: 'Versatile microcontroller board for prototyping and IoT projects. Perfect for robotics and sensor integration.', borrowers: [{ name: 'Rahul Sharma', email: 'rahul.sharma@university.edu', qty: 2 }, { name: 'Priya Singh', email: 'priya.singh@university.edu', qty: 1 }], returnDeadline: 'Aug 10, 2026' },
@@ -566,6 +561,52 @@ export const store = reactive({
     }
   },
 
+  async fetchEvents() {
+    this.isLoadingEvents = true;
+    try {
+      const token = this.token || localStorage.getItem('driven_token');
+      const rawList = await fetchEventsApi(token);
+      this.events = rawList.map(ev => {
+        const rawStatus = (ev.status || 'pending').toLowerCase();
+        const formattedStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
+        const formattedDate = ev.event_date
+          ? new Date(ev.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : (ev.date || 'TBD');
+        const formattedDeadline = ev.registration_deadline
+          ? new Date(ev.registration_deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : '';
+
+        return {
+          ...ev,
+          id: ev.id,
+          name: ev.name,
+          date: formattedDate,
+          event_date: ev.event_date,
+          venue: ev.venue,
+          status: formattedStatus,
+          rawStatus: rawStatus,
+          participants: ev.max_participants || ev.participants || 50,
+          max_participants: ev.max_participants || ev.participants || 50,
+          description: ev.description || '',
+          tagline: ev.short_description || ev.tagline || '',
+          short_description: ev.short_description || ev.tagline || '',
+          category: ev.category || 'workshop',
+          image: ev.cover_image_url || ev.image || 'https://images.unsplash.com/photo-1553408227-108e3f4edef1?w=600&h=400&fit=crop',
+          cover_image_url: ev.cover_image_url,
+          deadline: formattedDeadline,
+          registration_deadline: ev.registration_deadline,
+          agendas: ev.agendas || [],
+          additional_info: ev.additional_info || [],
+          mentors: ev.mentors || []
+        };
+      });
+    } catch (err) {
+      console.error('Failed to fetch events from backend:', err);
+    } finally {
+      this.isLoadingEvents = false;
+    }
+  },
+
   setAuth(token, user) {
     this.token = token;
     this.currentUser = user;
@@ -573,6 +614,7 @@ export const store = reactive({
     this.currentUserRole = (user && user.role) || 'student';
     localStorage.setItem('driven_token', token);
     localStorage.setItem('driven_user', JSON.stringify(user));
+    this.fetchEvents();
   },
 
   logout() {
@@ -582,5 +624,6 @@ export const store = reactive({
     this.currentUserRole = 'home';
     localStorage.removeItem('driven_token');
     localStorage.removeItem('driven_user');
+    this.fetchEvents();
   }
 });
