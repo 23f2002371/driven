@@ -16,13 +16,11 @@
 
 from __future__ import annotations
 
-import json
 import uuid
-from datetime import UTC, date, datetime
-from typing import Annotated, Any
+from datetime import UTC, datetime
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from pydantic import ValidationError
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
@@ -59,12 +57,10 @@ from app.schemas.event import (
     StudentProfile,
 )
 from app.schemas.student import DomainItem, TechnologyItem
-from app.services.cloudinary import upload_image_to_cloudinary
 from app.utils.enums import (
     CertificateType,
     Department,
-    EventCategory,
-    EventVenue,
+    EventStatus,
     UserRole,
     WinnerPosition,
 )
@@ -266,84 +262,8 @@ _CERTIFICATE_TYPE_BY_POSITION: dict[WinnerPosition, CertificateType] = {
     response_model=PrivateEventResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_event(
-    db: DbSession,
-    current_user: ClubAdmin,
-    name: str = Form(...),
-    short_description: str = Form(...),
-    category: EventCategory = Form(...),
-    event_date: date = Form(...),
-    registration_deadline: datetime = Form(...),
-    venue: EventVenue = Form(...),
-    max_participants: int = Form(...),
-    description: str = Form(...),
-    cover_image_url: str | None = Form(default=None),
-    agendas: str | None = Form(default=None),
-    additional_info: str | None = Form(default=None),
-    mentors: str | None = Form(default=None),
-    cover_image: UploadFile | None = File(default=None),
-) -> Event:
-    """Create an event together with its agenda, additional info, mentors, and optional cover image."""
-    parsed_agendas: list[dict[str, Any]] = []
-    if agendas:
-        try:
-            parsed_agendas = json.loads(agendas) if isinstance(agendas, str) else agendas
-        except Exception as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Invalid JSON format for agendas: {exc}",
-            ) from exc
-
-    parsed_additional_info: list[dict[str, Any]] = []
-    if additional_info:
-        try:
-            parsed_additional_info = (
-                json.loads(additional_info)
-                if isinstance(additional_info, str)
-                else additional_info
-            )
-        except Exception as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Invalid JSON format for additional_info: {exc}",
-            ) from exc
-
-    parsed_mentors: list[dict[str, Any]] = []
-    if mentors:
-        try:
-            parsed_mentors = json.loads(mentors) if isinstance(mentors, str) else mentors
-        except Exception as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Invalid JSON format for mentors: {exc}",
-            ) from exc
-
-    try:
-        payload = EventCreate(
-            name=name,
-            short_description=short_description,
-            category=category,
-            event_date=event_date,
-            registration_deadline=registration_deadline,
-            venue=venue,
-            max_participants=max_participants,
-            description=description,
-            cover_image_url=cover_image_url,
-            agendas=parsed_agendas,
-            additional_info=parsed_additional_info,
-            mentors=parsed_mentors,
-        )
-    except ValidationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=exc.errors(),
-        ) from exc
-
-    # Upload cover image to Cloudinary before saving the event to database
-    resolved_cover_image_url: str | None = payload.cover_image_url
-    if cover_image is not None and cover_image.filename:
-        resolved_cover_image_url = await upload_image_to_cloudinary(cover_image)
-
+def create_event(payload: EventCreate, db: DbSession, current_user: ClubAdmin) -> Event:
+    """Create an event together with its agenda, additional info and mentors."""
     event = Event(
         name=payload.name,
         short_description=payload.short_description,
@@ -353,7 +273,7 @@ async def create_event(
         venue=payload.venue,
         max_participants=payload.max_participants,
         description=payload.description,
-        cover_image_url=resolved_cover_image_url,
+        cover_image_url=payload.cover_image_url,
     )
     db.add(event)
     try:
@@ -426,6 +346,36 @@ def update_event(
         ) from exc
     db.refresh(event)
     return event
+
+
+@router.get("/events/private", response_model=list[PrivateEventResponse])
+def list_private_events(db: DbSession, current_user: CurrentUser) -> list[Event]:
+    """Fetch all events with their child collections for authenticated users."""
+    stmt = (
+        select(Event)
+        .options(
+            selectinload(Event.agendas),
+            selectinload(Event.additional_info),
+            selectinload(Event.mentors),
+        )
+        .order_by(Event.event_date.asc())
+    )
+    if current_user.role == UserRole.STUDENT:
+        stmt = stmt.where(Event.status != EventStatus.REJECTED)
+    return list(db.scalars(stmt).all())
+
+
+@router.get("/events", response_model=list[EventResponse])
+def list_public_events(db: DbSession) -> list[EventResponse]:
+    """Fetch all active public events."""
+    stmt = (
+        select(Event)
+        .where(Event.status != EventStatus.REJECTED)
+        .options(selectinload(Event.winners))
+        .order_by(Event.event_date.asc())
+    )
+    events = db.scalars(stmt).all()
+    return [_public_event_response(e) for e in events]
 
 
 @router.get("/events/{event_id}", response_model=EventResponse)
