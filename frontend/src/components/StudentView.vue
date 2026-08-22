@@ -373,9 +373,13 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { store } from '../store/mockData';
+
+onMounted(() => {
+  store.fetchEvents();
+});
 import Sidebar from './shared/Sidebar.vue';
 import InventoryGrid from './shared/InventoryGrid.vue';
 import StudentSupportDesk from './shared/StudentSupportDesk.vue';

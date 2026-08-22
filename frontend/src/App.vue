@@ -79,6 +79,8 @@ onMounted(async () => {
     } catch {
       store.logout();
     }
+  } else {
+    store.fetchEvents();
   }
 });
 

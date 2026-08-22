@@ -441,10 +441,14 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive, onMounted } from 'vue';
 import { store } from '../store/mockData';
 import Sidebar from './shared/Sidebar.vue';
 import TopHeader from './shared/TopHeader.vue';
+
+onMounted(() => {
+  store.fetchEvents();
+});
 
 const currentTab = ref('dashboard');
 const calVenue = ref('Lab A');

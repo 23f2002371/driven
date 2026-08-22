@@ -247,54 +247,78 @@ const event = computed(() => store.events.find(e => e.name === decodeURIComponen
 const data = computed(() => {
   const e = event.value;
   if (!e) return null;
-  let category = 'Workshop';
-  if (e.name.toLowerCase().includes('hackathon')) category = 'Hackathon';
-  else if (e.name.toLowerCase().includes('seminar')) category = 'Seminar';
-  else if (e.name.toLowerCase().includes('bootcamp')) category = 'Bootcamp';
-  else if (e.name.toLowerCase().includes('drone')) category = 'Workshop';
+
+  const category = e.category
+    ? (e.category.charAt(0).toUpperCase() + e.category.slice(1))
+    : (e.name.toLowerCase().includes('hackathon') ? 'Hackathon' : (e.name.toLowerCase().includes('seminar') ? 'Seminar' : 'Workshop'));
+
+  // Live Agendas from Backend
+  const liveAgendas = Array.isArray(e.agendas) && e.agendas.length > 0
+    ? e.agendas.map(a => ({
+        time: [a.start_time ? String(a.start_time).slice(0, 5) : '', a.end_time ? String(a.end_time).slice(0, 5) : ''].filter(Boolean).join(' - ') || 'TBD',
+        title: a.title || 'Session',
+        desc: a.description || ''
+      }))
+    : [
+        { time: '09:00 AM', title: 'Registration & Check-in', desc: 'Participants arrive and verify registration.' },
+        { time: '10:00 AM', title: 'Main Session', desc: e.description || 'Hands-on practical session.' },
+        { time: '04:00 PM', title: 'Q&A and Closing', desc: 'Open floor for questions and closing remarks.' }
+      ];
+
+  // Live Additional Info from Backend
+  const learningInfo = (e.additional_info || []).filter(i => i.section_type === 'learning').map(i => i.content);
+  const requirementInfo = (e.additional_info || []).filter(i => i.section_type === 'requirement').map(i => i.content);
+  const eligibilityInfo = (e.additional_info || []).filter(i => i.section_type === 'eligibility').map(i => i.content);
+
+  const whatYouLearn = learningInfo.length > 0 ? learningInfo : [
+    'Core concepts and industry best practices',
+    'Hands-on experience with modern tools and technologies',
+    'Real-world project deployment workflows',
+  ];
+
+  const requirements = requirementInfo.length > 0 ? requirementInfo : [
+    'Basic programming fundamentals',
+    'Laptop with development environment installed',
+    'Enthusiasm to learn and build',
+  ];
+
+  const whoCanAttend = eligibilityInfo.length > 0 ? eligibilityInfo : [
+    'All undergraduate and postgraduate students',
+    'Open to all branches and departments',
+  ];
+
+  // Live Mentors from Backend
+  const liveMentors = Array.isArray(e.mentors) && e.mentors.length > 0
+    ? e.mentors.map(m => {
+        const initials = m.name ? m.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'ME';
+        return {
+          name: m.name || 'Mentor',
+          role: m.designation || 'Industry Expert',
+          dept: m.company || 'Tech Partner',
+          avatar: initials,
+          linkedin: m.linkedin_url || '#',
+          email: m.email || ''
+        };
+      })
+    : [
+        { name: 'Faculty Lead', role: 'Event Coordinator', dept: 'Engineering Department', avatar: 'FL', linkedin: '#', email: '' }
+      ];
+
   return {
     ...e,
     category,
-    tagline: `An immersive ${category.toLowerCase()} experience designed for college students to build real-world skills.`,
-    fullDescription: `${e.description} This ${category.toLowerCase()} is designed to provide participants with hands-on experience and deep industry insights. Led by expert mentors and faculty, this session blends theoretical foundations with practical application, ensuring every attendee walks away with tangible skills and project experience.`,
-    agenda: [
-      { time: '09:00 AM', title: 'Registration & Check-in', desc: 'Participants arrive, verify registration, and receive event kits.' },
-      { time: '10:00 AM', title: 'Opening Keynote', desc: 'Welcome address and introduction to the event theme and objectives.' },
-      { time: '11:00 AM', title: 'Session 1: Core Concepts', desc: 'Deep dive into fundamental concepts and modern methodologies.' },
-      { time: '01:00 PM', title: 'Lunch Break', desc: 'Networking lunch for all participants and mentors.' },
-      { time: '02:00 PM', title: 'Session 2: Hands-on Workshop', desc: 'Practical exercises with guided mentorship from industry experts.' },
-      { time: '04:00 PM', title: 'Q&A and Discussion', desc: 'Open floor for questions, discussions, and feedback.' },
-      { time: '05:00 PM', title: 'Closing Ceremony', desc: 'Certificate distribution, closing remarks, and group photo.' },
-    ],
-    whatYouLearn: [
-      'Core concepts and industry best practices',
-      'Hands-on experience with modern tools and technologies',
-      'Problem-solving strategies and critical thinking',
-      'Collaborative development and teamwork',
-      'Real-world project deployment workflows',
-    ],
-    requirements: [
-      'Basic programming fundamentals',
-      'Laptop with minimum 8GB RAM',
-      'Enthusiasm to learn and build',
-      'Prior registration confirmation',
-    ],
-    whoCanAttend: [
-      'All undergraduate and postgraduate students',
-      'Faculty members interested in technology',
-      'Maximum 4 participants per team for group activities',
-      'Open to all branches and departments',
-    ],
-    speakers: [
-      { name: 'Dr. Rajesh Kumar', role: 'Professor & HOD', dept: 'Computer Science Engineering', avatar: 'RK', linkedin: '#', email: 'rajesh@college.edu' },
-      { name: 'Ms. Priya Sharma', role: 'Senior Software Engineer', dept: 'TechNova Club', avatar: 'PS', linkedin: '#', email: 'priya@technova.io' },
-      { name: 'Mr. Arjun Patel', role: 'Industry Mentor', dept: 'AI Research Lab', avatar: 'AP', linkedin: '#', email: 'arjun@airesearch.io' },
-    ],
+    image: e.cover_image_url || e.image || 'https://images.unsplash.com/photo-1553408227-108e3f4edef1?w=600&h=400&fit=crop',
+    tagline: e.short_description || e.tagline || `An immersive ${category.toLowerCase()} experience designed for college students to build real-world skills.`,
+    fullDescription: e.description || `${e.name} is designed to provide participants with hands-on experience and deep industry insights.`,
+    agenda: liveAgendas,
+    whatYouLearn,
+    requirements,
+    whoCanAttend,
+    speakers: liveMentors,
     timeline: [
-      { label: 'Registration Opens', date: '01 Jul 2026' },
+      { label: 'Registration Opens', date: 'Upcoming' },
       { label: 'Registration Closes', date: e.deadline || e.date },
-      { label: 'Check-in Begins', date: e.date },
-      { label: 'Opening Ceremony', date: e.date },
+      { label: 'Event Date', date: e.date },
       { label: 'Main Sessions', date: e.date },
       { label: 'Closing Ceremony', date: e.date },
     ],
@@ -302,24 +326,22 @@ const data = computed(() => {
       'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&h=600&fit=crop',
     ],
     registrationEndsIn: (() => {
-      if (!e.deadline) return 'N/A';
-      const diff = Math.ceil((new Date(e.deadline) - new Date()) / (1000 * 60 * 60 * 24));
+      if (!e.registration_deadline && !e.deadline) return 'N/A';
+      const target = new Date(e.registration_deadline || e.deadline);
+      const diff = Math.ceil((target - new Date()) / (1000 * 60 * 60 * 24));
       if (diff < 0) return 'Closed';
       if (diff === 0) return 'Today';
       return `${diff} days`;
     })(),
-    availableSeats: Math.max(1, e.participants - Math.floor(e.participants * 0.55)),
-    registeredStudents: Math.min(e.participants - 1, Math.floor(e.participants * 0.55)),
-    duration: '1 Day (6 Hours)',
-    organizedBy: 'TechNova Club',
+    availableSeats: Math.max(1, (e.max_participants || e.participants || 50) - Math.floor((e.max_participants || e.participants || 50) * 0.35)),
+    registeredStudents: Math.min((e.max_participants || e.participants || 50) - 1, Math.floor((e.max_participants || e.participants || 50) * 0.35)),
+    duration: '1 Day',
+    organizedBy: 'Student Club Management',
     registrationFee: 'Free',
-    contactPerson: 'Prof. Amit Verma',
-    hasDeadlinePassed: e.deadline ? new Date(e.deadline) < new Date() : false,
+    contactPerson: liveMentors[0]?.name || 'Event Coordinator',
+    hasDeadlinePassed: (e.registration_deadline || e.deadline) ? new Date(e.registration_deadline || e.deadline) < new Date() : false,
   };
 });
 

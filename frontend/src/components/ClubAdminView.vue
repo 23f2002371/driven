@@ -145,7 +145,7 @@
               <div class="ce-hero-left">
                 <div>
                   <h1 class="ce-page-title">Create Event</h1>
-                  <p class="ce-page-sub">Bring your next workshop, hackathon, or seminar to life. Fill in the details below and preview your event in real time.</p>
+                  <p class="ce-page-sub">Design your next workshop, hackathon, or seminar. Fill in the core details, configure the agenda and mentors, and submit for approval.</p>
                 </div>
               </div>
               <div class="ce-hero-right" :style="sceneParallax">
@@ -178,18 +178,18 @@
                   <div class="ce-ill-holo">
                     <div class="ce-holo-inner">
                       <div class="ce-holo-icon"><div class="ce-holo-dot"></div><span>Event Dashboard</span></div>
-                      <div class="ce-holo-row"><div class="ce-holo-label">Event</div><div class="ce-holo-val">IoT Workshop</div></div>
-                      <div class="ce-holo-row"><div class="ce-holo-label">Date</div><div class="ce-holo-val">Jul 30</div></div>
+                      <div class="ce-holo-row"><div class="ce-holo-label">Event</div><div class="ce-holo-val">{{ formEvent.name || 'New Event' }}</div></div>
+                      <div class="ce-holo-row"><div class="ce-holo-label">Date</div><div class="ce-holo-val">{{ formEvent.event_date || 'TBD' }}</div></div>
                       <div class="ce-holo-divider"></div>
-                      <div class="ce-holo-status"><div class="ce-holo-pulse"></div>Ready</div>
+                      <div class="ce-holo-status"><div class="ce-holo-pulse"></div>Step {{ createStep }}/2</div>
                     </div>
                     <div class="ce-holo-glow"></div>
                   </div>
                   <div class="ce-ill-card ce-ill-card-1">
-                    <div class="ce-card-inner"><span class="ce-card-icon bi bi-calendar3"></span><span class="ce-card-text">Jul 30</span></div>
+                    <div class="ce-card-inner"><span class="ce-card-icon bi bi-calendar3"></span><span class="ce-card-text">{{ formEvent.event_date || 'Date' }}</span></div>
                   </div>
                   <div class="ce-ill-card ce-ill-card-2">
-                    <div class="ce-card-inner"><span class="ce-card-icon bi bi-ticket"></span><span class="ce-card-text">50 seats</span></div>
+                    <div class="ce-card-inner"><span class="ce-card-icon bi bi-ticket"></span><span class="ce-card-text">{{ formEvent.max_participants }} seats</span></div>
                   </div>
                   <div class="ce-ill-card ce-ill-card-3">
                     <div class="ce-card-inner"><span class="ce-card-icon bi bi-people"></span><span class="ce-card-text">RSVP</span></div>
@@ -205,176 +205,434 @@
             </div>
           </section>
 
-          <div class="ce-layout">
+          <div class="ce-layout mt-4">
             <div class="ce-left">
-              <section class="ce-section" data-idx="0">
-                <div class="ce-section-head">
-                  <h3>Event Information</h3>
-                  <p>Give your event a name and choose a category.</p>
-                </div>
-                <div class="ce-field">
-                  <div class="ce-input-wrap" :class="{ 'ce-has-value': formEvent.name }">
-                    <input v-model="formEvent.name" type="text" placeholder="e.g. IoT Workshop" />
-                    <label>Event Name</label>
-                  </div>
-                </div>
-                <div class="ce-field">
-                  <div class="ce-input-wrap" :class="{ 'ce-has-value': formEvent.tagline }">
-                    <input v-model="formEvent.tagline" type="text" placeholder="e.g. Build real-world IoT solutions" />
-                    <label>Short Description</label>
-                  </div>
-                  <span class="ce-helper">A short, catchy description that appears on the event card.</span>
-                </div>
-                <div class="ce-field">
-                  <label class="ce-field-label">Category</label>
-                  <div class="ce-chips">
-                    <button v-for="cat in categories" :key="cat" class="ce-chip" :class="{ active: formEvent.category === cat }" @click="formEvent.category = cat">{{ cat }}</button>
-                  </div>
-                  <span class="ce-helper">Select the category that best fits your event.</span>
-                </div>
-              </section>
-
-              <div class="ce-divider"></div>
-
-              <section class="ce-section" data-idx="1">
-                <div class="ce-section-head">
-                  <h3>Date & Venue</h3>
-                  <p>When and where is your event taking place?</p>
-                </div>
-                <div class="ce-row">
-                  <div class="ce-field">
-                    <div class="ce-input-wrap" :class="{ 'ce-has-value': formEvent.date }">
-                      <input v-model="formEvent.date" type="text" placeholder="e.g. Jul 30, 2026" />
-                      <label>Date</label>
-                    </div>
+              <!-- ================= PAGE 1: BASIC INFORMATION ================= -->
+              <div v-if="createStep === 1" class="ce-page-anim">
+                <!-- Section 1: Event Information -->
+                <section class="ce-section" data-idx="0">
+                  <div class="ce-section-head">
+                    <h3><i class="bi bi-info-circle-fill me-2 text-indigo"></i>Event Information</h3>
+                    <p>Provide the primary title, short tagline, and category for your event.</p>
                   </div>
                   <div class="ce-field">
-                    <div class="ce-input-wrap" :class="{ 'ce-has-value': formEvent.time }">
-                      <input v-model="formEvent.time" type="text" placeholder="e.g. 09:00 AM" />
-                      <label>Time</label>
+                    <div class="ce-input-wrap" :class="{ 'ce-has-value': formEvent.name, 'ce-has-error': formErrors.name }">
+                      <input v-model="formEvent.name" type="text" placeholder="e.g. Next-Gen IoT Architecture" maxlength="150" required />
+                      <label>Event Name *</label>
+                    </div>
+                    <span v-if="formErrors.name" class="ce-field-error">{{ formErrors.name }}</span>
+                  </div>
+
+                  <div class="ce-field">
+                    <div class="ce-input-wrap" :class="{ 'ce-has-value': formEvent.short_description, 'ce-has-error': formErrors.short_description }">
+                      <input v-model="formEvent.short_description" type="text" placeholder="e.g. Hands-on sensor building & real-time telemetry" maxlength="255" required />
+                      <label>Short Description *</label>
+                    </div>
+                    <span v-if="formErrors.short_description" class="ce-field-error">{{ formErrors.short_description }}</span>
+                    <span v-else class="ce-helper">A brief 1-line summary displayed on event cards (max 255 characters).</span>
+                  </div>
+
+                  <div class="ce-field">
+                    <label class="ce-field-label">Category *</label>
+                    <div class="ce-chips">
+                      <button
+                        v-for="cat in categoryOptions"
+                        :key="cat.value"
+                        type="button"
+                        class="ce-chip"
+                        :class="{ active: formEvent.category === cat.value }"
+                        @click="formEvent.category = cat.value"
+                      >
+                        <i :class="'bi bi-' + cat.icon + ' me-1'"></i>{{ cat.label }}
+                      </button>
                     </div>
                   </div>
-                </div>
-                <div class="ce-field">
-                  <div class="ce-input-wrap ce-select-wrap" :class="{ 'ce-has-value': formEvent.venue }">
-                    <select v-model="formEvent.venue">
-                      <option v-for="v in venues" :key="v" :value="v">{{ v }}</option>
-                    </select>
-                    <label>Venue</label>
-                    <i class="bi bi-chevron-down ce-select-arrow"></i>
+                </section>
+
+                <div class="ce-divider"></div>
+
+                <!-- Section 2: Date, Deadline, Venue & Max Participants -->
+                <section class="ce-section" data-idx="1">
+                  <div class="ce-section-head">
+                    <h3><i class="bi bi-geo-alt-fill me-2 text-indigo"></i>Date, Deadline & Venue</h3>
+                    <p>Specify the date of the event, registration cutoff timestamp, location, and capacity.</p>
                   </div>
-                </div>
-              </section>
-
-              <div class="ce-divider"></div>
-
-              <section class="ce-section" data-idx="2">
-                <div class="ce-section-head">
-                  <h3>Registration Settings</h3>
-                  <p>Configure capacity, deadlines, and visibility.</p>
-                </div>
-                <div class="ce-field">
-                  <label class="ce-field-label">Expected Participants</label>
-                  <div class="ce-stepper">
-                    <button class="ce-step-btn" @click="formEvent.participants > 1 && formEvent.participants--" :disabled="formEvent.participants <= 1"><i class="bi bi-dash"></i></button>
-                    <div class="ce-step-value">
-                      <span class="ce-step-num">{{ formEvent.participants }}</span>
-                      <span class="ce-step-unit">participants</span>
+                  <div class="ce-row">
+                    <div class="ce-field">
+                      <label class="ce-field-label">Event Date *</label>
+                      <input v-model="formEvent.event_date" type="date" class="ce-standard-input" :class="{ 'ce-has-error': formErrors.event_date }" required />
+                      <span v-if="formErrors.event_date" class="ce-field-error">{{ formErrors.event_date }}</span>
                     </div>
-                    <button class="ce-step-btn" @click="formEvent.participants++" :disabled="formEvent.participants >= 500"><i class="bi bi-plus"></i></button>
-                  </div>
-                  <span class="ce-helper">Maximum capacity for this event.</span>
-                </div>
-                <div class="ce-field">
-                  <div class="ce-input-wrap" :class="{ 'ce-has-value': formEvent.deadline }">
-                    <input v-model="formEvent.deadline" type="text" placeholder="e.g. Jul 28, 2026" />
-                    <label>Registration Deadline</label>
-                  </div>
-                  <span class="ce-helper">Last date for participants to register.</span>
-                </div>
-              </section>
 
-              <div class="ce-divider"></div>
-
-              <section class="ce-section" data-idx="3">
-                <div class="ce-section-head">
-                  <h3>Description</h3>
-                  <p>Tell attendees what your event is about.</p>
-                </div>
-                <div class="ce-field">
-                  <div class="ce-textarea-wrap">
-                    <textarea v-model="formEvent.description" rows="5" placeholder="Write a compelling description of your event. Include key takeaways, agenda highlights, and what participants will gain..." maxlength="500"></textarea>
-                    <div class="ce-textarea-bottom">
-                      <span class="ce-helper">Make it engaging to attract more participants.</span>
-                      <span class="ce-char-count" :class="{ near: formEvent.description.length > 450 }">{{ formEvent.description.length }}/500</span>
+                    <div class="ce-field">
+                      <label class="ce-field-label">Registration Deadline *</label>
+                      <input v-model="formEvent.registration_deadline" type="datetime-local" class="ce-standard-input" :class="{ 'ce-has-error': formErrors.registration_deadline }" required />
+                      <span v-if="formErrors.registration_deadline" class="ce-field-error">{{ formErrors.registration_deadline }}</span>
                     </div>
                   </div>
-                </div>
-              </section>
 
-              <div class="ce-divider"></div>
-
-              <section class="ce-section" data-idx="4">
-                <div class="ce-section-head">
-                  <h3>Banner Image</h3>
-                  <p>Upload a cover image for your event card.</p>
-                </div>
-                <div class="ce-field">
-                  <div class="ce-upload-zone" @click="fileInput?.click()" @dragover.prevent @drop.prevent="handleDrop" :class="{ 'ce-has-banner': formEvent.bannerPreview }">
-                    <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/webp" hidden @change="handleFile" />
-                    <template v-if="!formEvent.bannerPreview">
-                      <div class="ce-upload-icon"><i class="bi bi-cloud-arrow-up"></i></div>
-                      <p class="ce-upload-text">Drag & drop banner or <span>Browse files</span></p>
-                      <p class="ce-upload-hint">PNG, JPG, WebP &middot; Max 5MB</p>
-                    </template>
-                    <template v-else>
-                      <img :src="formEvent.bannerPreview" alt="Banner preview" class="ce-banner-img" />
-                      <button class="ce-banner-remove" @click.stop="removeBanner" title="Remove"><i class="bi bi-x-lg"></i></button>
-                    </template>
+                  <div class="ce-field mt-2">
+                    <label class="ce-field-label">Venue *</label>
+                    <div class="ce-input-wrap ce-select-wrap" :class="{ 'ce-has-value': formEvent.venue }">
+                      <select v-model="formEvent.venue">
+                        <option v-for="v in venueOptions" :key="v.value" :value="v.value">{{ v.label }}</option>
+                      </select>
+                      <i class="bi bi-chevron-down ce-select-arrow"></i>
+                    </div>
                   </div>
-                </div>
-              </section>
+
+                  <div class="ce-field mt-3">
+                    <label class="ce-field-label">Max Capacity *</label>
+                    <div class="ce-stepper">
+                      <button type="button" class="ce-step-btn" @click="formEvent.max_participants > 1 && formEvent.max_participants--" :disabled="formEvent.max_participants <= 1"><i class="bi bi-dash"></i></button>
+                      <div class="ce-step-value">
+                        <span class="ce-step-num">{{ formEvent.max_participants }}</span>
+                        <span class="ce-step-unit">participants</span>
+                      </div>
+                      <button type="button" class="ce-step-btn" @click="formEvent.max_participants++" :disabled="formEvent.max_participants >= 5000"><i class="bi bi-plus"></i></button>
+                    </div>
+                    <span class="ce-helper">Maximum attendee capacity for this event.</span>
+                  </div>
+                </section>
+
+                <div class="ce-divider"></div>
+
+                <!-- Section 3: Full Description -->
+                <section class="ce-section" data-idx="2">
+                  <div class="ce-section-head">
+                    <h3><i class="bi bi-text-paragraph me-2 text-indigo"></i>Detailed Description</h3>
+                    <p>Explain the event background, objectives, and highlights for participants.</p>
+                  </div>
+                  <div class="ce-field">
+                    <div class="ce-textarea-wrap" :class="{ 'ce-has-error': formErrors.description }">
+                      <textarea v-model="formEvent.description" rows="5" placeholder="Write a comprehensive description of your event. Detail what participants will experience, workshop milestones, tools to be used, and practical takeaways..." required></textarea>
+                      <div class="ce-textarea-bottom">
+                        <span class="ce-helper">Detailed descriptions improve student interest and attendance rate.</span>
+                        <span class="ce-char-count">{{ formEvent.description.length }} chars</span>
+                      </div>
+                    </div>
+                    <span v-if="formErrors.description" class="ce-field-error">{{ formErrors.description }}</span>
+                  </div>
+                </section>
+
+                <div class="ce-divider"></div>
+
+                <!-- Section 4: Cover Image (Local Upload) -->
+                <section class="ce-section" data-idx="3">
+                  <div class="ce-section-head">
+                    <h3><i class="bi bi-image-fill me-2 text-indigo"></i>Cover Image</h3>
+                    <p>Upload a cover banner from your computer for your event card.</p>
+                  </div>
+                  <div class="ce-field">
+                    <div class="ce-upload-zone" @click="fileInput?.click()" @dragover.prevent @drop.prevent="handleDrop" :class="{ 'ce-has-banner': formEvent.cover_image_preview || formEvent.cover_image_url }">
+                      <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/webp" hidden @change="handleFile" />
+                      <template v-if="!(formEvent.cover_image_preview || formEvent.cover_image_url)">
+                        <div class="ce-upload-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+                        <p class="ce-upload-text">Drag & drop banner or <span>Browse files</span></p>
+                        <p class="ce-upload-hint">PNG, JPG, WebP · Max 5MB</p>
+                      </template>
+                      <template v-else>
+                        <img :src="formEvent.cover_image_preview || formEvent.cover_image_url" alt="Banner preview" class="ce-banner-img" />
+                        <button type="button" class="ce-banner-remove" @click.stop="removeBanner" title="Remove"><i class="bi bi-x-lg"></i></button>
+                      </template>
+                    </div>
+                  </div>
+                </section>
+              </div>
+
+              <!-- ================= PAGE 2: AGENDAS, ADDITIONAL INFO, MENTORS ================= -->
+              <div v-else-if="createStep === 2" class="ce-page-anim">
+                <!-- Section 1: Agendas Schedule -->
+                <section class="ce-section">
+                  <div class="ce-section-head d-flex justify-content-between align-items-center">
+                    <div>
+                      <h3><i class="bi bi-clock-history me-2 text-indigo"></i>Event Agendas / Schedule</h3>
+                      <p>Add time-boxed agenda slots to outline the flow of the event.</p>
+                    </div>
+                    <button type="button" class="ce-btn-add" @click="addAgendaItem">
+                      <i class="bi bi-plus-circle-fill me-1"></i>Add Agenda Slot
+                    </button>
+                  </div>
+
+                  <div v-if="formEvent.agendas.length === 0" class="ce-empty-box">
+                    <i class="bi bi-calendar-range ce-empty-icon"></i>
+                    <p class="ce-empty-text">No agenda slots added yet. Click below to add your first session!</p>
+                    <button type="button" class="ce-btn-secondary btn-sm" @click="addAgendaItem">
+                      <i class="bi bi-plus-lg me-1"></i>Add First Session
+                    </button>
+                  </div>
+
+                  <div v-else class="ce-cards-stack">
+                    <div v-for="(agenda, idx) in formEvent.agendas" :key="idx" class="ce-dynamic-card">
+                      <div class="ce-dynamic-head">
+                        <span class="ce-dynamic-num"><i class="bi bi-hourglass-split me-1"></i>Slot #{{ idx + 1 }}</span>
+                        <button type="button" class="ce-btn-delete" @click="removeAgendaItem(idx)" title="Remove Slot">
+                          <i class="bi bi-trash3-fill"></i>
+                        </button>
+                      </div>
+                      <div class="ce-dynamic-body">
+                        <div class="ce-row">
+                          <div class="ce-field">
+                            <label class="ce-field-label">Start Time</label>
+                            <input v-model="agenda.start_time" type="time" class="ce-standard-input" />
+                          </div>
+                          <div class="ce-field">
+                            <label class="ce-field-label">End Time</label>
+                            <input v-model="agenda.end_time" type="time" class="ce-standard-input" />
+                          </div>
+                        </div>
+                        <div class="ce-field">
+                          <div class="ce-input-wrap" :class="{ 'ce-has-value': agenda.title }">
+                            <input v-model="agenda.title" type="text" placeholder="e.g. Keynote & Sensor Setup" maxlength="150" />
+                            <label>Session Title</label>
+                          </div>
+                        </div>
+                        <div class="ce-field mb-0">
+                          <div class="ce-textarea-wrap">
+                            <textarea v-model="agenda.description" rows="2" placeholder="Brief outline of topics, demos, or activities in this slot..."></textarea>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <div class="ce-divider"></div>
+
+                <!-- Section 2: Additional Info (Learning, Requirement, Eligibility) -->
+                <section class="ce-section">
+                  <div class="ce-section-head">
+                    <h3><i class="bi bi-card-checklist me-2 text-indigo"></i>Additional Event Information</h3>
+                    <p>Add multiple bullet points for learning outcomes, prerequisites, and eligibility details.</p>
+                  </div>
+
+                  <div class="ce-info-grid">
+                    <!-- Learning Outcomes -->
+                    <div class="ce-info-box">
+                      <div class="ce-info-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                          <div class="ce-info-icon-badge blue"><i class="bi bi-book-fill"></i></div>
+                          <h5 class="ce-info-title">Learning Outcomes</h5>
+                        </div>
+                        <button type="button" class="ce-btn-add-sm" @click="addInfoItem('learning')">
+                          <i class="bi bi-plus-lg me-1"></i>Add Outcome
+                        </button>
+                      </div>
+
+                      <div v-if="getInfoItems('learning').length === 0" class="ce-empty-point-box">
+                        <span class="text-muted small">No learning outcomes added. Click "+ Add Outcome" to add points.</span>
+                      </div>
+                      <div v-else class="ce-info-list">
+                        <div v-for="(item, idx) in getInfoItems('learning')" :key="idx" class="ce-info-item-row">
+                          <span class="ce-info-item-num">{{ idx + 1 }}</span>
+                          <input
+                            v-model="item.content"
+                            type="text"
+                            class="ce-info-item-input"
+                            placeholder="e.g. Master Arduino GPIO and sensor telemetry"
+                            @keydown.enter.prevent="addInfoItem('learning')"
+                          />
+                          <button type="button" class="ce-info-item-remove" @click="removeInfoItem(item)" title="Remove Point">
+                            <i class="bi bi-trash3"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Requirements & Prerequisites -->
+                    <div class="ce-info-box">
+                      <div class="ce-info-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                          <div class="ce-info-icon-badge purple"><i class="bi bi-laptop-fill"></i></div>
+                          <h5 class="ce-info-title">Prerequisites & Requirements</h5>
+                        </div>
+                        <button type="button" class="ce-btn-add-sm" @click="addInfoItem('requirement')">
+                          <i class="bi bi-plus-lg me-1"></i>Add Requirement
+                        </button>
+                      </div>
+
+                      <div v-if="getInfoItems('requirement').length === 0" class="ce-empty-point-box">
+                        <span class="text-muted small">No requirements added. Click "+ Add Requirement" to add points.</span>
+                      </div>
+                      <div v-else class="ce-info-list">
+                        <div v-for="(item, idx) in getInfoItems('requirement')" :key="idx" class="ce-info-item-row">
+                          <span class="ce-info-item-num">{{ idx + 1 }}</span>
+                          <input
+                            v-model="item.content"
+                            type="text"
+                            class="ce-info-item-input"
+                            placeholder="e.g. Laptop with Node.js v18+ and VS Code installed"
+                            @keydown.enter.prevent="addInfoItem('requirement')"
+                          />
+                          <button type="button" class="ce-info-item-remove" @click="removeInfoItem(item)" title="Remove Point">
+                            <i class="bi bi-trash3"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Eligibility Details -->
+                    <div class="ce-info-box">
+                      <div class="ce-info-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                          <div class="ce-info-icon-badge green"><i class="bi bi-person-check-fill"></i></div>
+                          <h5 class="ce-info-title">Eligibility Details</h5>
+                        </div>
+                        <button type="button" class="ce-btn-add-sm" @click="addInfoItem('eligibility')">
+                          <i class="bi bi-plus-lg me-1"></i>Add Eligibility
+                        </button>
+                      </div>
+
+                      <div v-if="getInfoItems('eligibility').length === 0" class="ce-empty-point-box">
+                        <span class="text-muted small">No eligibility details added. Click "+ Add Eligibility" to add points.</span>
+                      </div>
+                      <div v-else class="ce-info-list">
+                        <div v-for="(item, idx) in getInfoItems('eligibility')" :key="idx" class="ce-info-item-row">
+                          <span class="ce-info-item-num">{{ idx + 1 }}</span>
+                          <input
+                            v-model="item.content"
+                            type="text"
+                            class="ce-info-item-input"
+                            placeholder="e.g. Open to 2nd & 3rd year engineering students, teams of 2-4"
+                            @keydown.enter.prevent="addInfoItem('eligibility')"
+                          />
+                          <button type="button" class="ce-info-item-remove" @click="removeInfoItem(item)" title="Remove Point">
+                            <i class="bi bi-trash3"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <div class="ce-divider"></div>
+
+                <!-- Section 3: Mentors -->
+                <section class="ce-section">
+                  <div class="ce-section-head d-flex justify-content-between align-items-center">
+                    <div>
+                      <h3><i class="bi bi-person-workspace me-2 text-indigo"></i>Mentors & Speakers</h3>
+                      <p>Feature industry mentors, workshop leads, or guest speakers.</p>
+                    </div>
+                    <button type="button" class="ce-btn-add" @click="addMentorItem">
+                      <i class="bi bi-person-plus-fill me-1"></i>Add Mentor
+                    </button>
+                  </div>
+
+                  <div v-if="formEvent.mentors.length === 0" class="ce-empty-box">
+                    <i class="bi bi-person-badge ce-empty-icon"></i>
+                    <p class="ce-empty-text">No mentors added yet. Add industry experts guiding this event!</p>
+                    <button type="button" class="ce-btn-secondary btn-sm" @click="addMentorItem">
+                      <i class="bi bi-plus-lg me-1"></i>Add First Mentor
+                    </button>
+                  </div>
+
+                  <div v-else class="ce-cards-stack">
+                    <div v-for="(mentor, idx) in formEvent.mentors" :key="idx" class="ce-dynamic-card">
+                      <div class="ce-dynamic-head">
+                        <span class="ce-dynamic-num"><i class="bi bi-person-fill me-1"></i>Mentor #{{ idx + 1 }}</span>
+                        <button type="button" class="ce-btn-delete" @click="removeMentorItem(idx)" title="Remove Mentor">
+                          <i class="bi bi-trash3-fill"></i>
+                        </button>
+                      </div>
+                      <div class="ce-dynamic-body">
+                        <div class="ce-row">
+                          <div class="ce-field">
+                            <div class="ce-input-wrap" :class="{ 'ce-has-value': mentor.name }">
+                              <input v-model="mentor.name" type="text" placeholder="e.g. Dr. Sarah Jenkins" maxlength="100" />
+                              <label>Full Name</label>
+                            </div>
+                          </div>
+                          <div class="ce-field">
+                            <div class="ce-input-wrap" :class="{ 'ce-has-value': mentor.designation }">
+                              <input v-model="mentor.designation" type="text" placeholder="e.g. Principal IoT Architect" maxlength="100" />
+                              <label>Designation</label>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="ce-row">
+                          <div class="ce-field">
+                            <div class="ce-input-wrap" :class="{ 'ce-has-value': mentor.company }">
+                              <input v-model="mentor.company" type="text" placeholder="e.g. Robotics Innovation Labs" maxlength="150" />
+                              <label>Company / Organization</label>
+                            </div>
+                          </div>
+                          <div class="ce-field">
+                            <div class="ce-input-wrap" :class="{ 'ce-has-value': mentor.email }">
+                              <input v-model="mentor.email" type="email" placeholder="sarah.j@company.com" />
+                              <label>Email Address</label>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="ce-field mb-0">
+                          <div class="ce-input-wrap" :class="{ 'ce-has-value': mentor.linkedin_url }">
+                            <input v-model="mentor.linkedin_url" type="url" placeholder="https://linkedin.com/in/sarah-jenkins" />
+                            <label>LinkedIn Profile URL</label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
             </div>
 
+            <!-- Realtime Preview Sidebar -->
             <div class="ce-right">
               <div class="ce-sidebar">
                 <div class="ce-preview-card glass">
                   <div class="ce-preview-img" :style="{ backgroundImage: `url(${previewImage})` }">
                     <div class="ce-preview-img-overlay">
-                      <span class="ce-preview-date-tag"><i class="bi bi-calendar3 me-1"></i>{{ formEvent.date || 'Select Date' }}</span>
+                      <span class="ce-preview-date-tag"><i class="bi bi-calendar3 me-1"></i>{{ formEvent.event_date || 'Select Date' }}</span>
                     </div>
                   </div>
                   <div class="ce-preview-body">
-                    <span class="ce-preview-cat">{{ formEvent.category }}</span>
+                    <span class="ce-preview-cat">{{ categoryLabel(formEvent.category) }}</span>
                     <h4 class="ce-preview-title">{{ formEvent.name || 'Event Title' }}</h4>
-                    <p v-if="formEvent.tagline" class="ce-preview-tagline">{{ formEvent.tagline }}</p>
-                    <p class="ce-preview-desc">{{ formEvent.description ? (formEvent.description.length > 80 ? formEvent.description.slice(0, 80) + '...' : formEvent.description) : 'Your event description will appear here.' }}</p>
+                    <p v-if="formEvent.short_description" class="ce-preview-tagline">{{ formEvent.short_description }}</p>
+                    <p class="ce-preview-desc">{{ formEvent.description ? (formEvent.description.length > 90 ? formEvent.description.slice(0, 90) + '...' : formEvent.description) : 'Your event description will appear here.' }}</p>
                   </div>
                   <div class="ce-preview-footer">
-                    <span class="ce-preview-meta"><i class="bi bi-people-fill me-1"></i>{{ formEvent.participants }} seats</span>
-                    <span class="ce-preview-status">{{ formEvent.name ? 'Draft' : 'Not Saved' }}</span>
+                    <span class="ce-preview-meta"><i class="bi bi-geo-alt me-1"></i>{{ venueLabel(formEvent.venue) }}</span>
+                    <span class="ce-preview-meta"><i class="bi bi-people-fill me-1"></i>{{ formEvent.max_participants }} seats</span>
                   </div>
                 </div>
 
                 <div class="ce-summary glass">
-                  <h5 class="ce-summary-title">Event Summary</h5>
-                  <div class="ce-summary-row"><span class="ce-summary-label"><i class="bi bi-tag me-2"></i>Category</span><span class="ce-summary-val">{{ formEvent.category }}</span></div>
-                  <div class="ce-summary-row"><span class="ce-summary-label"><i class="bi bi-people me-2"></i>Participants</span><span class="ce-summary-val">{{ formEvent.participants }}</span></div>
-                  <div class="ce-summary-row"><span class="ce-summary-label"><i class="bi bi-flag me-2"></i>Status</span><span class="ce-summary-val"><span class="ce-badge-draft">Draft</span></span></div>
-                  <div class="ce-summary-row"><span class="ce-summary-label"><i class="bi bi-eye me-2"></i>Visibility</span><span class="ce-summary-val">Public</span></div>
-                  <div class="ce-summary-row"><span class="ce-summary-label"><i class="bi bi-person me-2"></i>Organizer</span><span class="ce-summary-val">Club Lead</span></div>
-                  <div class="ce-summary-divider"></div>
-                  <div class="ce-summary-save"><i class="bi bi-check-circle-fill"></i><span>Auto-save active</span></div>
+                  <h5 class="ce-summary-title"><i class="bi bi-layers-fill me-2 text-indigo"></i>Event Summary</h5>
+                  <div class="ce-summary-row"><span class="ce-summary-label"><i class="bi bi-tag me-2"></i>Category</span><span class="ce-summary-val">{{ categoryLabel(formEvent.category) }}</span></div>
+                  <div class="ce-summary-row"><span class="ce-summary-label"><i class="bi bi-geo-alt me-2"></i>Venue</span><span class="ce-summary-val">{{ venueLabel(formEvent.venue) }}</span></div>
+                  <div class="ce-summary-row"><span class="ce-summary-label"><i class="bi bi-people me-2"></i>Max Seats</span><span class="ce-summary-val">{{ formEvent.max_participants }}</span></div>
+                  <div class="ce-summary-row"><span class="ce-summary-label"><i class="bi bi-clock me-2"></i>Agendas</span><span class="ce-summary-val">{{ formEvent.agendas.length }} slots</span></div>
+                  <div class="ce-summary-row"><span class="ce-summary-label"><i class="bi bi-person-badge me-2"></i>Mentors</span><span class="ce-summary-val">{{ formEvent.mentors.length }} mentors</span></div>
+                  <div class="ce-summary-row"><span class="ce-summary-label"><i class="bi bi-flag me-2"></i>Status</span><span class="ce-summary-val"><span class="ce-badge-draft">Pending Review</span></span></div>
                 </div>
               </div>
             </div>
           </div>
 
+          <!-- Bottom Action Bar with Step Navigation -->
           <div class="ce-action-bar glass">
-            <div class="ce-action-left"><i class="bi bi-check-circle-fill" style="color: #4ade80;"></i><span>Draft saved</span></div>
+            <div class="ce-action-left">
+              <button v-if="createStep === 2" type="button" class="ce-btn-secondary" @click="createStep = 1">
+                <i class="bi bi-arrow-left me-2"></i>Back to Basic Details
+              </button>
+              <div v-else class="d-flex align-items-center gap-2">
+                <i class="bi bi-info-circle text-indigo"></i>
+                <span class="text-muted small">Step 1 of 2: Basic Information</span>
+              </div>
+            </div>
             <div class="ce-action-right">
-              <button class="ce-btn-secondary" @click="saveDraft"><i class="bi bi-archive me-2"></i>Save Draft</button>
-              <button class="ce-btn-primary" @click="submitNewEvent">Submit for Approval <i class="bi bi-arrow-right ms-2"></i></button>
+              <button v-if="createStep === 1" type="button" class="ce-btn-primary" @click="goToStep2">
+                Next: Agenda & Details <i class="bi bi-arrow-right ms-2"></i>
+              </button>
+              <button v-else type="button" class="ce-btn-primary submit-btn" :disabled="isSubmitting" @click="submitNewEvent">
+                <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <i v-else class="bi bi-send-check-fill me-2"></i>
+                {{ isSubmitting ? 'Submitting...' : 'Submit for Approval' }}
+              </button>
             </div>
           </div>
         </div>
@@ -438,7 +696,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { store } from '../store/mockData';
 import Sidebar from './shared/Sidebar.vue';
@@ -448,6 +706,11 @@ import CopilotRecommendation from './shared/CopilotRecommendation.vue';
 import CalendarPickerModal from './shared/CalendarPickerModal.vue';
 import CampusBountyAdmin from './CampusBountyAdmin.vue';
 import { useCalendarToast } from '../composables/useCalendarToast';
+import { createEventApi } from '../api/events';
+
+onMounted(() => {
+  store.fetchEvents();
+});
 
 const router = useRouter();
 const { show: showCalendarToast, message: calendarToastMsg, showCalendarToast: triggerCalendarToast } = useCalendarToast();
@@ -482,32 +745,6 @@ const adminInitials = computed(() => {
   return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
 });
 
-const categories = ['Workshop', 'Hackathon', 'Seminar', 'Competition', 'Bootcamp', 'Webinar'];
-const venues = ['Lab A', 'Lab B', 'Auditorium', 'Seminar Hall', 'Innovation Lab', 'Robotics Lab'];
-const fileInput = ref(null);
-
-const formEvent = reactive({ name: '', tagline: '', category: 'Workshop', venue: 'Lab A', date: '', time: '09:00 AM', participants: 50, description: '', deadline: '', bannerPreview: null });
-
-const defaultBanner = 'https://images.unsplash.com/photo-1553408227-108e3f4edef1?w=600&h=400&fit=crop';
-const previewImage = computed(() => formEvent.bannerPreview || defaultBanner);
-
-const handleFile = (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => { formEvent.bannerPreview = ev.target?.result || null; };
-  reader.readAsDataURL(file);
-};
-const handleDrop = (e) => {
-  const file = e.dataTransfer?.files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => { formEvent.bannerPreview = ev.target?.result || null; };
-  reader.readAsDataURL(file);
-};
-const removeBanner = () => { formEvent.bannerPreview = null; };
-const saveDraft = () => { /* auto-save in demo */ };
-
 const navItems = computed(() => [
   { label: 'Dashboard', icon: 'bar-chart-fill', key: 'dashboard' },
   { label: 'Events', icon: 'calendar-event-fill', key: 'events' },
@@ -526,7 +763,8 @@ const openEventDetails = (event) => { router.push({ name: 'event-details', param
 const heroRef = ref(null);
 const mouse = reactive({ x: 0, y: 0 });
 const onHeroMove = (e) => {
-  const r = heroRef.value.getBoundingClientRect();
+  const r = heroRef.value?.getBoundingClientRect();
+  if (!r) return;
   mouse.x = ((e.clientX - r.left) / r.width - 0.5) * 2;
   mouse.y = ((e.clientY - r.top) / r.height - 0.5) * 2;
 };
@@ -535,11 +773,304 @@ const sceneParallax = computed(() => ({
   transform: `translateX(${mouse.x * 8}px) translateY(${mouse.y * 6}px)`
 }));
 
-const submitNewEvent = () => {
-  if (!formEvent.name || !formEvent.date || !formEvent.description) return;
-  store.addEvent({ name: formEvent.name, tagline: formEvent.tagline, category: formEvent.category, venue: formEvent.venue, date: formEvent.date, deadline: formEvent.deadline, participants: formEvent.participants, description: formEvent.description });
-  Object.assign(formEvent, { name: '', tagline: '', date: '', time: '09:00 AM', description: '', deadline: '', bannerPreview: null, participants: 50, category: 'Workshop', venue: 'Lab A' });
-  currentTab.value = 'events';
+const createStep = ref(1);
+
+const categoryOptions = [
+  { value: 'workshop', label: 'Workshop', icon: 'tools' },
+  { value: 'hackathon', label: 'Hackathon', icon: 'code-slash' },
+  { value: 'seminar', label: 'Seminar', icon: 'easel' },
+  { value: 'competition', label: 'Competition', icon: 'trophy' },
+  { value: 'bootcamp', label: 'Bootcamp', icon: 'lightning-charge' },
+  { value: 'webinar', label: 'Webinar', icon: 'broadcast' },
+  { value: 'robotics', label: 'Robotics', icon: 'robot' },
+  { value: 'other', label: 'Other', icon: 'grid' },
+];
+
+const venueOptions = [
+  { value: 'seminar_hall', label: 'Seminar Hall' },
+  { value: 'auditorium', label: 'Auditorium' },
+  { value: 'main_ground', label: 'Main Ground' },
+  { value: 'computer_lab_1', label: 'Computer Lab 1' },
+  { value: 'computer_lab_2', label: 'Computer Lab 2' },
+  { value: 'robotics_lab', label: 'Robotics Lab' },
+  { value: 'innovation_lab', label: 'Innovation Lab' },
+  { value: 'conference_room', label: 'Conference Room' },
+  { value: 'classroom', label: 'Classroom' },
+  { value: 'online', label: 'Online' },
+  { value: 'other', label: 'Other' },
+];
+
+const isSubmitting = ref(false);
+const fileInput = ref(null);
+const defaultBanner = 'https://images.unsplash.com/photo-1553408227-108e3f4edef1?w=800&h=500&fit=crop';
+
+const formEvent = reactive({
+  name: '',
+  short_description: '',
+  category: 'workshop',
+  event_date: '',
+  registration_deadline: '',
+  venue: 'seminar_hall',
+  max_participants: 50,
+  description: '',
+  cover_image: null,
+  cover_image_preview: null,
+  cover_image_url: '',
+  agendas: [],
+  additional_info: [],
+  mentors: []
+});
+
+const formErrors = reactive({
+  name: '',
+  short_description: '',
+  event_date: '',
+  registration_deadline: '',
+  description: '',
+});
+
+const processImageFile = (file) => {
+  if (!file) return;
+
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!validTypes.includes(file.type)) {
+    triggerCalendarToast('Please upload a valid image file (JPG, PNG, WebP).');
+    return;
+  }
+
+  const maxSize = 5 * 1024 * 1024; // 5 MB
+  if (file.size > maxSize) {
+    triggerCalendarToast('Image size exceeds 5MB limit. Please choose a smaller image.');
+    return;
+  }
+
+  // Clean up previous blob URL to prevent memory leaks
+  if (formEvent.cover_image_preview && formEvent.cover_image_preview.startsWith('blob:')) {
+    URL.revokeObjectURL(formEvent.cover_image_preview);
+  }
+
+  // Preserve original JavaScript File object
+  formEvent.cover_image = file;
+
+  // Generate temporary preview URL
+  formEvent.cover_image_preview = URL.createObjectURL(file);
+};
+
+const handleFile = (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  processImageFile(file);
+};
+
+const handleDrop = (e) => {
+  const file = e.dataTransfer?.files?.[0];
+  if (!file) return;
+  processImageFile(file);
+};
+
+const removeBanner = () => {
+  // Revoke object URL if it was created locally
+  if (formEvent.cover_image_preview && formEvent.cover_image_preview.startsWith('blob:')) {
+    URL.revokeObjectURL(formEvent.cover_image_preview);
+  }
+  formEvent.cover_image = null;
+  formEvent.cover_image_preview = null;
+  formEvent.cover_image_url = '';
+  if (fileInput.value) fileInput.value.value = '';
+};
+
+const categoryLabel = (val) => {
+  const match = categoryOptions.find(c => c.value === val);
+  return match ? match.label : (val ? val.charAt(0).toUpperCase() + val.slice(1) : 'Event');
+};
+
+const venueLabel = (val) => {
+  const match = venueOptions.find(v => v.value === val);
+  return match ? match.label : (val || 'Venue');
+};
+
+const previewImage = computed(() => formEvent.cover_image_preview || formEvent.cover_image_url || defaultBanner);
+
+const getInfoItems = (type) => {
+  return formEvent.additional_info.filter(i => i.section_type === type);
+};
+
+const addInfoItem = (type) => {
+  formEvent.additional_info.push({ section_type: type, content: '' });
+};
+
+const removeInfoItem = (item) => {
+  const idx = formEvent.additional_info.indexOf(item);
+  if (idx !== -1) {
+    formEvent.additional_info.splice(idx, 1);
+  }
+};
+
+const isStep2Filled = computed(() => {
+  return formEvent.agendas.some(a => a.title?.trim()) ||
+    formEvent.additional_info.some(i => i.content?.trim()) ||
+    formEvent.mentors.some(m => m.name?.trim());
+});
+
+const addAgendaItem = () => {
+  formEvent.agendas.push({ start_time: '', end_time: '', title: '', description: '' });
+};
+
+const removeAgendaItem = (idx) => {
+  formEvent.agendas.splice(idx, 1);
+};
+
+const addMentorItem = () => {
+  formEvent.mentors.push({ name: '', company: '', designation: '', email: '', linkedin_url: '' });
+};
+
+const removeMentorItem = (idx) => {
+  formEvent.mentors.splice(idx, 1);
+};
+
+const validateStep1 = () => {
+  let valid = true;
+  formErrors.name = '';
+  formErrors.short_description = '';
+  formErrors.event_date = '';
+  formErrors.registration_deadline = '';
+  formErrors.description = '';
+
+  if (!formEvent.name.trim()) {
+    formErrors.name = 'Event name is required (max 150 chars).';
+    valid = false;
+  }
+  if (!formEvent.short_description.trim()) {
+    formErrors.short_description = 'Short description is required (max 255 chars).';
+    valid = false;
+  }
+  if (!formEvent.event_date) {
+    formErrors.event_date = 'Please select a valid event date.';
+    valid = false;
+  }
+  if (!formEvent.registration_deadline) {
+    formErrors.registration_deadline = 'Please choose a registration deadline.';
+    valid = false;
+  }
+  if (!formEvent.description.trim()) {
+    formErrors.description = 'Detailed description is required.';
+    valid = false;
+  }
+  return valid;
+};
+
+const goToStep2 = () => {
+  createStep.value = 2;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+const submitNewEvent = async () => {
+  if (isSubmitting.value) return;
+
+  if (!validateStep1()) {
+    createStep.value = 1;
+    triggerCalendarToast('Please fill all required fields marked with * before submitting.');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
+  isSubmitting.value = true;
+
+  try {
+    // Format ISO registration deadline
+    const deadlineIso = formEvent.registration_deadline
+      ? (formEvent.registration_deadline.includes('T') && formEvent.registration_deadline.length === 16
+          ? `${formEvent.registration_deadline}:00Z`
+          : new Date(formEvent.registration_deadline).toISOString())
+      : new Date().toISOString();
+
+    // Prepare multipart/form-data payload
+    const formData = new FormData();
+    formData.append('name', formEvent.name.trim());
+    formData.append('short_description', formEvent.short_description.trim());
+    formData.append('category', formEvent.category);
+    formData.append('event_date', formEvent.event_date);
+    formData.append('registration_deadline', deadlineIso);
+    formData.append('venue', formEvent.venue);
+    formData.append('max_participants', String(parseInt(formEvent.max_participants) || 1));
+    formData.append('description', formEvent.description.trim());
+
+    if (formEvent.cover_image_url) {
+      formData.append('cover_image_url', formEvent.cover_image_url);
+    }
+
+    const filteredAgendas = formEvent.agendas
+      .filter(a => a.title?.trim() || a.start_time)
+      .map(a => ({
+        start_time: a.start_time ? (a.start_time.length === 5 ? `${a.start_time}:00` : a.start_time) : null,
+        end_time: a.end_time ? (a.end_time.length === 5 ? `${a.end_time}:00` : a.end_time) : null,
+        title: a.title?.trim() || null,
+        description: a.description?.trim() || null,
+      }));
+    formData.append('agendas', JSON.stringify(filteredAgendas));
+
+    const filteredAdditionalInfo = formEvent.additional_info
+      .filter(i => i.content?.trim())
+      .map(i => ({
+        section_type: i.section_type,
+        content: i.content.trim(),
+      }));
+    formData.append('additional_info', JSON.stringify(filteredAdditionalInfo));
+
+    const filteredMentors = formEvent.mentors
+      .filter(m => m.name?.trim())
+      .map(m => ({
+        name: m.name?.trim() || null,
+        company: m.company?.trim() || null,
+        designation: m.designation?.trim() || null,
+        email: m.email?.trim() || null,
+        linkedin_url: m.linkedin_url?.trim() || null,
+      }));
+    formData.append('mentors', JSON.stringify(filteredMentors));
+
+    // Append cover image File object if uploaded
+    if (formEvent.cover_image instanceof File) {
+      formData.append('cover_image', formEvent.cover_image);
+    }
+
+    const token = store.token || localStorage.getItem('driven_token');
+    const createdEvent = await createEventApi(formData, token);
+
+    // Refresh live events from backend
+    await store.fetchEvents();
+
+    triggerCalendarToast(`Event "${createdEvent.name}" created and submitted for approval!`);
+
+    // Clean up object URL
+    if (formEvent.cover_image_preview && formEvent.cover_image_preview.startsWith('blob:')) {
+      URL.revokeObjectURL(formEvent.cover_image_preview);
+    }
+
+    // Reset form to clean state
+    Object.assign(formEvent, {
+      name: '',
+      short_description: '',
+      category: 'workshop',
+      event_date: '',
+      registration_deadline: '',
+      venue: 'seminar_hall',
+      max_participants: 50,
+      description: '',
+      cover_image: null,
+      cover_image_preview: null,
+      cover_image_url: '',
+      agendas: [],
+      additional_info: [],
+      mentors: [],
+    });
+
+    createStep.value = 1;
+    currentTab.value = 'events';
+  } catch (err) {
+    triggerCalendarToast(err.message || 'Failed to create event. Please try again.');
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 const addNewInventoryItem = (item) => {
   store.inventory.push(item);
@@ -1263,6 +1794,320 @@ const handleResolve = (ticket) => {
 @keyframes illFloat {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-5px); }
+}
+
+/* ── Standard Inputs (Date, Datetime, Time) ── */
+.ce-standard-input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0.75rem 1rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1.5px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.92rem;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+  color-scheme: dark;
+}
+.ce-standard-input:focus {
+  border-color: rgba(129, 140, 248, 0.4);
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.08), 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+.ce-standard-input.ce-has-error {
+  border-color: rgba(248, 113, 113, 0.5) !important;
+  background: rgba(239, 68, 68, 0.04) !important;
+}
+
+/* ── Page Animation ── */
+.ce-page-anim {
+  animation: ceFadeSlide 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@keyframes ceFadeSlide {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Form Error Feedback ── */
+.ce-field-error {
+  display: block;
+  font-size: 0.75rem;
+  color: #f87171;
+  margin-top: 0.35rem;
+  font-weight: 500;
+}
+.ce-input-wrap.ce-has-error input,
+.ce-input-wrap.ce-has-error select,
+.ce-textarea-wrap.ce-has-error textarea {
+  border-color: rgba(248, 113, 113, 0.5) !important;
+  background: rgba(239, 68, 68, 0.04) !important;
+}
+
+/* ── Dynamic Form Cards (Agendas & Mentors) ── */
+.ce-cards-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.ce-dynamic-card {
+  background: rgba(15, 23, 42, 0.55);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1.2rem;
+  transition: all 0.25s ease;
+}
+.ce-dynamic-card:hover {
+  border-color: rgba(129, 140, 248, 0.2);
+  background: rgba(15, 23, 42, 0.7);
+}
+.ce-dynamic-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.ce-dynamic-num {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #a5b4fc;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.ce-dynamic-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.ce-btn-add {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: #a5b4fc;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.45rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+}
+.ce-btn-add:hover {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: #818cf8;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+.ce-btn-delete {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ce-btn-delete:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fee2e2;
+  transform: scale(1.08);
+}
+.ce-empty-box {
+  background: rgba(15, 23, 42, 0.35);
+  border: 2px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+.ce-empty-icon {
+  font-size: 2rem;
+  color: #64748b;
+}
+.ce-empty-text {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* ── Additional Info Grid ── */
+.ce-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.ce-info-box {
+  background: rgba(15, 23, 42, 0.55);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1.25rem;
+  transition: all 0.25s ease;
+}
+.ce-info-box:hover {
+  border-color: rgba(129, 140, 248, 0.25);
+}
+.ce-info-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+.ce-info-icon-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+.ce-info-icon-badge.blue {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+.ce-info-icon-badge.purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+}
+.ce-info-icon-badge.green {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.25);
+}
+.ce-info-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0;
+}
+.ce-info-type {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-family: monospace;
+}
+.text-indigo { color: #818cf8 !important; }
+
+.ce-btn-add-sm {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: #a5b4fc;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+}
+.ce-btn-add-sm:hover {
+  background: rgba(99, 102, 241, 0.28);
+  border-color: #818cf8;
+  color: #ffffff;
+}
+
+.ce-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+}
+.ce-info-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.ce-info-item-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ce-info-item-input {
+  flex: 1;
+  min-height: 44px;
+  padding: 0.6rem 1rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.88rem;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ce-info-item-input:focus {
+  border-color: rgba(129, 140, 248, 0.4);
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.08);
+}
+.ce-info-item-remove {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.ce-info-item-remove:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fee2e2;
+  transform: scale(1.06);
+}
+.ce-btn-add-point {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  color: #a5b4fc;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.5rem 0.85rem;
+  cursor: pointer;
+  margin-top: 0.75rem;
+  transition: all 0.2s;
+}
+.ce-btn-add-point:hover {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(129, 140, 248, 0.4);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+.ce-empty-point-box {
+  padding: 0.75rem 1rem;
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.06);
 }
 
 /* ── 2-Column Layout ── */

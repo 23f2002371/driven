@@ -181,21 +181,17 @@
             <div class="event-card glass" @click="openEventDetails(event)" style="cursor: pointer;">
               <div class="event-card-image" :style="{ backgroundImage: `url(${event.image})` }">
                 <div class="event-image-overlay">
-                  <span class="event-date-badge">{{ formatDate(event.date) }}</span>
-                  <span class="event-venue-tag"><i class="bi bi-geo-alt-fill me-1"></i>{{ event.venue }}</span>
+                  <span class="event-date-badge"><i class="bi bi-calendar-event-fill me-1"></i>{{ formatDate(event.event_date || event.date) }}</span>
+                  <span class="event-venue-tag"><i class="bi bi-geo-alt-fill me-1"></i>{{ venueLabel(event.venue) }}</span>
                 </div>
               </div>
               <div class="event-card-body">
-                <span class="event-club-tag">{{ event.club || 'Tech Club' }}</span>
+                <span class="event-club-tag">{{ event.category ? (event.category.charAt(0).toUpperCase() + event.category.slice(1)) : 'Event' }}</span>
                 <h5 class="event-card-title">{{ event.name }}</h5>
-                <p class="event-card-desc">{{ event.description }}</p>
               </div>
               <div class="event-card-footer">
-                <span class="event-participants"><i class="bi bi-people-fill me-1"></i>{{ event.participants }} / {{ event.participants + 20 }} seats</span>
-                <div class="d-flex align-items-center gap-2">
-                  <span class="event-status approved">{{ event.status }}</span>
-                  <button class="btn-register-sm" @click.stop="openEventDetails(event)">Details</button>
-                </div>
+                <span class="event-participants"><i class="bi bi-people-fill me-1"></i>{{ event.participants || event.max_participants || 50 }} seats</span>
+                <span class="event-deadline-tag"><i class="bi bi-hourglass-split me-1 text-warning"></i>Deadline: {{ formatDeadline(event.registration_deadline || event.deadline, event.event_date || event.date) }}</span>
               </div>
             </div>
           </div>
@@ -453,16 +449,19 @@
     </footer>
 
     <!-- Auth Modal -->
-    <div v-if="activeModal" class="auth-overlay" @click.self="activeModal = null">
+    <div v-if="activeModal" class="auth-overlay" @click.self="activeModal = null; authPromptMessage = ''">
       <div class="auth-card glass-modal">
         <div class="auth-card-header">
           <div class="auth-tabs">
             <button class="auth-tab" :class="{ active: authMode === 'login' }" @click="switchAuthMode('login')">Sign In</button>
             <button class="auth-tab" :class="{ active: authMode === 'signup' }" @click="switchAuthMode('signup')">Sign Up</button>
           </div>
-          <button class="auth-close" @click="activeModal = null"><i class="bi bi-x-lg"></i></button>
+          <button class="auth-close" @click="activeModal = null; authPromptMessage = ''"><i class="bi bi-x-lg"></i></button>
         </div>
         <div class="auth-card-body">
+          <div v-if="authPromptMessage" class="auth-prompt-banner">
+            <i class="bi bi-shield-lock-fill me-2"></i>{{ authPromptMessage }}
+          </div>
           <form v-if="authMode === 'login'" @submit.prevent="handleLogin" class="auth-form">
             <div class="auth-field">
               <label class="auth-label">Email</label>
@@ -531,6 +530,10 @@ import * as api from '../api/auth';
 
 const router = useRouter();
 
+onMounted(() => {
+  store.fetchEvents();
+});
+
 const activeModal = ref(null);
 const authMode = ref('login');
 const scrolled = ref(false);
@@ -542,16 +545,24 @@ const toast = ref('');
 const authLoading = ref(false);
 const authError = ref('');
 
+const authPromptMessage = ref('');
+const targetEventAfterLogin = ref(null);
+
 const loginForm = reactive({ email: '', password: '' });
 const signupForm = reactive({ name: '', email: '', password: '' });
 
-const approvedEvents = computed(() => store.events.filter(e => e.status === 'Approved'));
+const approvedEvents = computed(() => {
+  return store.events
+    .filter(e => e.status !== 'Rejected' && e.rawStatus !== 'rejected')
+    .slice(0, 6);
+});
 
 const latestWinners = computed(() => store.eventWinners[0]);
 
-const showAuthModal = (type) => {
+const showAuthModal = (type, customPrompt = '') => {
   authMode.value = type;
   activeModal.value = type;
+  authPromptMessage.value = customPrompt || (type === 'login' ? authPromptMessage.value : '');
   authError.value = '';
   loginForm.email = '';
   loginForm.password = '';
@@ -593,8 +604,16 @@ const handleLogin = async () => {
     const user = await api.me(access_token);
     store.setAuth(access_token, user);
     activeModal.value = null;
-    toast.value = `Welcome back, ${user.full_name}! Redirecting to your dashboard...`;
-    router.replace(roleHome[user.role] || '/home');
+    toast.value = `Welcome back, ${user.full_name}!`;
+    
+    if (targetEventAfterLogin.value) {
+      const ev = targetEventAfterLogin.value;
+      targetEventAfterLogin.value = null;
+      authPromptMessage.value = '';
+      router.push({ name: 'event-details', params: { eventName: encodeURIComponent(ev.name) } });
+    } else {
+      router.replace(roleHome[user.role] || '/home');
+    }
   } catch (err) {
     authError.value = formatAuthError(err);
   } finally {
@@ -615,7 +634,15 @@ const handleSignup = async () => {
     store.setAuth(access_token, user);
     activeModal.value = null;
     toast.value = `Account created! Welcome to DRIVEN, ${user.full_name}.`;
-    router.replace(roleHome[user.role] || '/home');
+    
+    if (targetEventAfterLogin.value) {
+      const ev = targetEventAfterLogin.value;
+      targetEventAfterLogin.value = null;
+      authPromptMessage.value = '';
+      router.push({ name: 'event-details', params: { eventName: encodeURIComponent(ev.name) } });
+    } else {
+      router.replace(roleHome[user.role] || '/home');
+    }
   } catch (err) {
     authError.value = formatAuthError(err);
   } finally {
@@ -635,8 +662,16 @@ const onOAuthMessage = async (event) => {
       const user = await api.me(token);
       store.setAuth(token, user);
       activeModal.value = null;
-      toast.value = `Welcome, ${user.full_name}! Redirecting to your dashboard...`;
-      router.replace(roleHome[user.role] || '/home');
+      toast.value = `Welcome, ${user.full_name}!`;
+      
+      if (targetEventAfterLogin.value) {
+        const ev = targetEventAfterLogin.value;
+        targetEventAfterLogin.value = null;
+        authPromptMessage.value = '';
+        router.push({ name: 'event-details', params: { eventName: encodeURIComponent(ev.name) } });
+      } else {
+        router.replace(roleHome[user.role] || '/home');
+      }
     } catch (err) {
       authError.value = formatAuthError(err);
     } finally {
@@ -651,11 +686,38 @@ const scrollTo = (id) => {
 };
 
 const formatDate = (dateStr) => {
-  const parts = dateStr.split(' ');
-  return parts.length >= 2 ? parts[1].replace(',', '') : dateStr;
+  if (!dateStr) return 'TBD';
+  const d = new Date(dateStr);
+  if (!isNaN(d.getTime())) {
+    return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  return dateStr;
 };
 
-const openEventDetails = (event) => { router.push({ name: 'event-details', params: { eventName: encodeURIComponent(event.name) } }); };
+const formatDeadline = (deadlineStr, fallbackDateStr) => {
+  const target = deadlineStr || fallbackDateStr;
+  if (!target) return 'TBD';
+  const d = new Date(target);
+  if (!isNaN(d.getTime())) {
+    return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  return target;
+};
+
+const venueLabel = (val) => {
+  if (!val) return 'Campus Venue';
+  return val.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
+
+const openEventDetails = (event) => {
+  if (store.isAuthenticated) {
+    router.push({ name: 'event-details', params: { eventName: encodeURIComponent(event.name) } });
+  } else {
+    targetEventAfterLogin.value = event;
+    authPromptMessage.value = 'Sign in to see the details';
+    showAuthModal('login', 'Sign in to see the details');
+  }
+};
 const handleRegister = (event) => {
   toast.value = `Registered for ${event.name}! Check your email for the QR ticket.`;
   setTimeout(() => { toast.value = ''; }, 3500);
@@ -883,3 +945,40 @@ function onParticleLeave() {
   mouseY = -10000;
 }
 </script>
+
+<style scoped>
+.auth-prompt-banner {
+  background: rgba(129, 140, 248, 0.14);
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  color: #c7d2fe;
+  padding: 0.65rem 0.95rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.1rem;
+  backdrop-filter: blur(8px);
+}
+
+.event-date-badge {
+  background: rgba(99, 102, 241, 0.45) !important;
+  border: 1px solid rgba(165, 180, 252, 0.5) !important;
+  color: #ffffff !important;
+  padding: 0.35rem 0.85rem !important;
+  border-radius: 999px !important;
+  font-size: 0.825rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  backdrop-filter: blur(10px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 10px rgba(99, 102, 241, 0.3) !important;
+}
+
+.event-deadline-tag {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+}
+</style>
