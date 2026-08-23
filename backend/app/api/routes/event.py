@@ -16,16 +16,18 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import DbSession, get_current_user, require_roles
+from app.core.config import settings
 from app.models.domain import (
     Domain,
     StudentDomain,
@@ -262,8 +264,101 @@ _CERTIFICATE_TYPE_BY_POSITION: dict[WinnerPosition, CertificateType] = {
     response_model=PrivateEventResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def create_event(payload: EventCreate, db: DbSession, current_user: ClubAdmin) -> Event:
-    """Create an event together with its agenda, additional info and mentors."""
+async def create_event(
+    request: Request,
+    db: DbSession,
+    current_user: ClubAdmin,
+) -> Event:
+    """Create an event together with its agenda, additional info and mentors.
+    Supports both multipart/form-data (with file upload) and application/json.
+    """
+    content_type = request.headers.get("content-type", "")
+
+    if content_type.startswith("multipart/form-data"):
+        form = await request.form()
+        name = form.get("name")
+        short_description = form.get("short_description")
+        category = form.get("category")
+        event_date = form.get("event_date")
+        registration_deadline = form.get("registration_deadline")
+        venue = form.get("venue")
+        max_participants = form.get("max_participants")
+        description = form.get("description")
+        cover_image_url = form.get("cover_image_url") or None
+
+        agendas_raw = form.get("agendas")
+        try:
+            agendas = json.loads(agendas_raw) if agendas_raw else []
+        except Exception:
+            agendas = []
+
+        additional_info_raw = form.get("additional_info")
+        try:
+            additional_info = json.loads(additional_info_raw) if additional_info_raw else []
+        except Exception:
+            additional_info = []
+
+        mentors_raw = form.get("mentors")
+        try:
+            mentors = json.loads(mentors_raw) if mentors_raw else []
+        except Exception:
+            mentors = []
+
+        # Handle image file upload to Cloudinary
+        cover_image_file = form.get("cover_image")
+        if cover_image_file and hasattr(cover_image_file, "file") and getattr(cover_image_file, "filename", None):
+            if settings.CLOUDINARY_CLOUD_NAME and settings.CLOUDINARY_API_KEY and settings.CLOUDINARY_API_SECRET:
+                try:
+                    import cloudinary
+                    import cloudinary.uploader
+
+                    cloudinary.config(
+                        cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+                        api_key=settings.CLOUDINARY_API_KEY,
+                        api_secret=settings.CLOUDINARY_API_SECRET,
+                    )
+                    file_bytes = await cover_image_file.read()
+                    if file_bytes:
+                        upload_result = cloudinary.uploader.upload(
+                            file_bytes,
+                            folder="club-management/events",
+                            resource_type="image",
+                        )
+                        cover_image_url = upload_result.get("secure_url")
+                except Exception:
+                    pass
+
+        payload_dict = {
+            "name": name,
+            "short_description": short_description,
+            "category": category,
+            "event_date": event_date,
+            "registration_deadline": registration_deadline,
+            "venue": venue,
+            "max_participants": int(max_participants) if max_participants else 1,
+            "description": description,
+            "cover_image_url": cover_image_url,
+            "agendas": agendas,
+            "additional_info": additional_info,
+            "mentors": mentors,
+        }
+        try:
+            payload = EventCreate.model_validate(payload_dict)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            ) from exc
+    else:
+        try:
+            body = await request.json()
+            payload = EventCreate.model_validate(body)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            ) from exc
+
     event = Event(
         name=payload.name,
         short_description=payload.short_description,

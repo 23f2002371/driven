@@ -6,6 +6,7 @@ Each test is self-contained and creates its own data via the API or the
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, date, datetime, time
 
 from fastapi.testclient import TestClient
@@ -23,7 +24,13 @@ from app.models.event import (
 )
 from app.models.student import Student
 from app.models.user import User
-from app.utils.enums import Department, EventStatus, AdditionalInfoType, UserRole, WinnerPosition
+from app.utils.enums import (
+    AdditionalInfoType,
+    Department,
+    EventStatus,
+    UserRole,
+    WinnerPosition,
+)
 from tests.conftest import auth_headers
 
 API = "/api/events"
@@ -157,6 +164,48 @@ def test_create_event_as_club_admin(
     body = response.json()
     assert body["name"] == "Intro to AI Workshop"
     assert body["status"] == "pending"
+
+
+def test_create_event_multipart_form_data(
+    client: TestClient, club_admin: User
+) -> None:
+    data = {
+        "name": "DSA Bootcamp",
+        "short_description": "Master Data Structures and Algorithms",
+        "category": "workshop",
+        "event_date": "2026-08-25",
+        "registration_deadline": "2026-08-24T11:59:00Z",
+        "venue": "seminar_hall",
+        "max_participants": "58",
+        "description": "Comprehensive DSA Bootcamp with live mentoring.",
+        "cover_image_url": "https://example.com/default.jpg",
+        "agendas": json.dumps([
+            {"start_time": "09:00:00", "end_time": "12:00:00", "title": "Linear Structures", "description": "Arrays and Lists"}
+        ]),
+        "additional_info": json.dumps([
+            {"section_type": "learning", "content": "Master algorithms"}
+        ]),
+        "mentors": json.dumps([
+            {"name": "Navanit Ray", "company": "IIT Madras", "designation": "HOD CS", "email": "navanit@example.com"}
+        ]),
+    }
+    files = {
+        "cover_image": ("dsa_image.jpeg", b"\xff\xd8\xff\xe0fakejpegdata", "image/jpeg")
+    }
+    response = client.post(
+        f"{API}",
+        data=data,
+        files=files,
+        headers=auth_headers(club_admin),
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["name"] == "DSA Bootcamp"
+    assert len(body["agendas"]) == 1
+    assert len(body["additional_info"]) == 1
+    assert len(body["mentors"]) == 1
+    assert body["mentors"][0]["name"] == "Navanit Ray"
 
 
 def test_create_event_as_student_forbidden(client: TestClient, student: User) -> None:
@@ -1187,8 +1236,8 @@ def test_list_public_events(client: TestClient, db_session: Session) -> None:
     """Public events endpoint returns non-rejected events ordered by date."""
     event1 = Event(
         name="Public Event 1",
-        short_description="Short desc 1",
-        description="Full description for event 1",
+        short_description="Public event one",
+        description="Public event one description",
         category="workshop",
         event_date=date(2026, 11, 10),
         registration_deadline=datetime(2026, 11, 5, tzinfo=UTC),
@@ -1199,24 +1248,24 @@ def test_list_public_events(client: TestClient, db_session: Session) -> None:
     )
     event2 = Event(
         name="Public Event 2",
-        short_description="Short desc 2",
-        description="Full description for event 2",
+        short_description="Public event two",
+        description="Public event two description",
         category="hackathon",
         event_date=date(2026, 12, 1),
         registration_deadline=datetime(2026, 11, 25, tzinfo=UTC),
-        venue="lab_a",
+        venue="computer_lab_1",
         max_participants=100,
         status=EventStatus.PENDING,
         cover_image_url="https://example.com/e2.jpg",
     )
     event_rejected = Event(
         name="Rejected Event",
-        short_description="Short desc rej",
-        description="Full description for rejected event",
+        short_description="Rejected event",
+        description="Rejected event description",
         category="workshop",
         event_date=date(2026, 10, 1),
         registration_deadline=datetime(2026, 9, 25, tzinfo=UTC),
-        venue="lab_b",
+        venue="computer_lab_2",
         max_participants=30,
         status=EventStatus.REJECTED,
     )
@@ -1255,8 +1304,8 @@ def test_list_private_events_as_admin(client: TestClient, db_session: Session) -
     admin = _create_admin(db_session, email="admin_private@example.com")
     event = Event(
         name="Full Workshop Event",
-        short_description="Short desc admin",
-        description="Full description for admin event",
+        short_description="Full workshop event",
+        description="Full workshop event description",
         category="workshop",
         event_date=date(2026, 11, 15),
         registration_deadline=datetime(2026, 11, 10, tzinfo=UTC),
@@ -1310,8 +1359,8 @@ def test_list_private_events_as_student(
     student = _create_student_user(db_session, email="student_private@example.com")
     event_active = Event(
         name="Active Student Event",
-        short_description="Active student event short desc",
-        description="Full description for active student event",
+        short_description="Active student event",
+        description="Active student event description",
         category="workshop",
         event_date=date(2026, 11, 20),
         registration_deadline=datetime(2026, 11, 15, tzinfo=UTC),
@@ -1321,12 +1370,12 @@ def test_list_private_events_as_student(
     )
     event_rejected = Event(
         name="Cancelled Event",
-        short_description="Cancelled event short desc",
-        description="Full description for cancelled event",
+        short_description="Cancelled event",
+        description="Cancelled event description",
         category="workshop",
         event_date=date(2026, 11, 25),
         registration_deadline=datetime(2026, 11, 20, tzinfo=UTC),
-        venue="lab_a",
+        venue="computer_lab_1",
         max_participants=20,
         status=EventStatus.REJECTED,
     )

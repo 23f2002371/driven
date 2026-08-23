@@ -90,7 +90,7 @@
     "error": null
   },
   {
-    "test": "tests/integration/test_auth.py::test_register_password_boundary_lengths[12345678]",
+    "test": "tests/integration/test_auth.py::test_register_password_boundary_lengths[123456]",
     "outcome": "passed",
     "error": null
   },
@@ -720,6 +720,11 @@
     "error": null
   },
   {
+    "test": "tests/integration/test_event.py::test_create_event_multipart_form_data",
+    "outcome": "passed",
+    "error": null
+  },
+  {
     "test": "tests/integration/test_event.py::test_create_event_as_student_forbidden",
     "outcome": "passed",
     "error": null
@@ -946,6 +951,31 @@
   },
   {
     "test": "tests/integration/test_event.py::test_get_student_certificates_as_admin_forbidden",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_list_public_events",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_list_public_events_empty",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_list_private_events_as_admin",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_list_private_events_as_student",
+    "outcome": "passed",
+    "error": null
+  },
+  {
+    "test": "tests/integration/test_event.py::test_list_private_events_unauthenticated_fails",
     "outcome": "passed",
     "error": null
   },

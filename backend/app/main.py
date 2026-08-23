@@ -18,7 +18,13 @@ app = FastAPI(
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    errors = jsonable_encoder(exc.errors())
+    raw_errors = []
+    for err in exc.errors():
+        err_dict = dict(err)
+        if isinstance(err_dict.get("input"), (bytes, bytearray)):
+            err_dict["input"] = "<binary data>"
+        raw_errors.append(err_dict)
+    errors = jsonable_encoder(raw_errors)
     for err in errors:
         loc = err.get("loc", ())
         field_raw = str(loc[-1]) if loc else ""
