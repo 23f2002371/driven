@@ -47,12 +47,26 @@ class EventStatus(str, Enum):
     REJECTED = "rejected"
 
 
+class EventRejectionReason(str, Enum):
+    """Reason why an event proposal was rejected."""
+
+    VENUE_NOT_AVAILABLE = "venue_not_available"
+    TIME_SLOT_CONFLICT = "time_slot_conflict"
+    EQUIPMENT_NOT_AVAILABLE = "equipment_not_available"
+    CAPACITY_EXCEEDED = "capacity_exceeded"
+    INCOMPLETE_INFORMATION = "incomplete_information"
+    OTHER = "other"
+
+
 class AdditionalInfoType(str, Enum):
     """Type of an extra event information section."""
 
     LEARNING = "learning"
     REQUIREMENT = "requirement"
     ELIGIBILITY = "eligibility"
+
+
+SectionType = AdditionalInfoType
 
 
 class RegistrationStatus(str, Enum):
@@ -319,3 +333,17 @@ class DeliverableStatus(str, Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
+
+
+class EquipmentCategory(str, Enum):
+    """Category classification for lab and club equipment."""
+
+    ELECTRONICS = "electronics"
+    MICROCONTROLLER = "microcontroller"
+    SENSOR_MODULE = "sensor_module"
+    ROBOTICS = "robotics"
+    AUDIO_VISUAL = "audio_visual"
+    COMPUTING_HARDWARE = "computing_hardware"
+    NETWORKING = "networking"
+    TOOLS_AND_HARDWARE = "tools_and_hardware"
+    OTHER = "other"

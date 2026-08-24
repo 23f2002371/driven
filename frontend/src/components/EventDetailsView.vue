@@ -1,6 +1,11 @@
 <template>
   <div class="event-details-page">
-      <div v-if="data" class="ed-hero">
+    <div v-if="isLoading" class="ed-loading-state">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="mt-3 text-muted">Loading event details...</p>
+    </div>
+
+    <div v-else-if="data" class="ed-hero">
       <button class="ed-hero-back" @click="goBack"><i class="bi bi-arrow-left"></i></button>
       <img :src="data.image" alt="" class="ed-hero-img" />
       <div class="ed-hero-overlay"></div>
@@ -8,13 +13,12 @@
         <div class="ed-hero-badges">
           <span class="ed-badge-category">{{ data.category }}</span>
           <span class="ed-badge-status" :class="data.status.toLowerCase()">{{ data.status }}</span>
-          <span class="ed-badge-date"><i class="bi bi-calendar3 me-1"></i>{{ data.date }}</span>
-          <span class="ed-badge-club"><i class="bi bi-building me-1"></i>{{ data.organizedBy }}</span>
+          <span class="ed-badge-date"><i class="bi bi-calendar3 me-1"></i>{{ data.formattedDate }}</span>
         </div>
         <div class="ed-hero-bottom">
           <div class="ed-hero-text">
             <h1 class="ed-hero-title">{{ data.name }}</h1>
-            <p class="ed-hero-tagline">{{ data.tagline }}</p>
+            <p v-if="data.tagline" class="ed-hero-tagline">{{ data.tagline }}</p>
           </div>
           <div class="ed-hero-actions">
             <button class="ed-btn-register" :class="{ 'ed-btn-disabled': data.hasDeadlinePassed && !isRegistered }" :disabled="data.hasDeadlinePassed && !isRegistered" @click="handleRegister">
@@ -23,35 +27,37 @@
             </button>
             <button class="ed-btn-icon" title="Share" @click="shareEvent"><i class="bi bi-share"></i></button>
             <button v-if="canAddToCalendar" class="ed-btn-icon ed-btn-calendar" title="Add to Calendar" @click="showCalendarModal = true"><i class="bi bi-calendar-plus"></i></button>
-            <button class="ed-btn-volunteer-text" @click="showVolModal = true">Volunteering</button>
           </div>
         </div>
       </div>
     </div>
 
-    <div v-if="data" class="ed-content">
+    <div v-if="!isLoading && data" class="ed-content">
       <div class="ed-content-inner">
         <div class="ed-left">
-          <section class="ed-section" data-reveal="up">
+          <section v-if="data.fullDescription" class="ed-section" data-reveal="up">
             <h2 class="ed-section-title">About Event</h2>
             <p class="ed-description">{{ data.fullDescription }}</p>
           </section>
 
-          <section class="ed-section" data-reveal="up">
+          <section v-if="data.agenda && data.agenda.length > 0" class="ed-section" data-reveal="up">
             <h2 class="ed-section-title">Agenda / Schedule</h2>
             <div class="ed-agenda">
               <div v-for="(item, i) in data.agenda" :key="i" class="ed-agenda-item" :style="{ '--idx': i }">
                 <div class="ed-agenda-time">{{ item.time }}</div>
-                <div class="ed-agenda-dot"><div class="ed-agenda-pulse"></div></div>
+                <div class="ed-agenda-tracker">
+                  <div class="ed-agenda-dot"><div class="ed-agenda-pulse"></div></div>
+                  <div v-if="i < data.agenda.length - 1" class="ed-agenda-line"></div>
+                </div>
                 <div class="ed-agenda-info">
                   <h4>{{ item.title }}</h4>
-                  <p>{{ item.desc }}</p>
+                  <p v-if="item.desc">{{ item.desc }}</p>
                 </div>
               </div>
             </div>
           </section>
 
-          <section class="ed-section" data-reveal="up">
+          <section v-if="data.whatYouLearn && data.whatYouLearn.length > 0" class="ed-section" data-reveal="up">
             <h2 class="ed-section-title">What You'll Learn</h2>
             <div class="ed-list-grid">
               <div v-for="(item, i) in data.whatYouLearn" :key="i" class="ed-list-item">
@@ -60,8 +66,8 @@
             </div>
           </section>
 
-          <section class="ed-section" data-reveal="up">
-            <h2 class="ed-section-title">Requirements</h2>
+          <section v-if="data.requirements && data.requirements.length > 0" class="ed-section" data-reveal="up">
+            <h2 class="ed-section-title">Prerequisites & Requirements</h2>
             <div class="ed-list-grid">
               <div v-for="(item, i) in data.requirements" :key="i" class="ed-list-item">
                 <i class="bi bi-shield-check"></i><span>{{ item }}</span>
@@ -69,8 +75,8 @@
             </div>
           </section>
 
-          <section class="ed-section" data-reveal="up">
-            <h2 class="ed-section-title">Who Can Attend</h2>
+          <section v-if="data.whoCanAttend && data.whoCanAttend.length > 0" class="ed-section" data-reveal="up">
+            <h2 class="ed-section-title">Eligibility Details</h2>
             <div class="ed-list-grid">
               <div v-for="(item, i) in data.whoCanAttend" :key="i" class="ed-list-item">
                 <i class="bi bi-person-check"></i><span>{{ item }}</span>
@@ -83,17 +89,11 @@
           <div class="ed-info-card glass">
             <div class="ed-info-header"><i class="bi bi-info-circle-fill me-2"></i>Event Details</div>
             <div class="ed-info-divider"></div>
-            <div class="ed-info-row"><span class="ed-info-label"><i class="bi bi-calendar-event"></i>Date</span><span class="ed-info-value">{{ data.date }}</span></div>
-            <div class="ed-info-row"><span class="ed-info-label"><i class="bi bi-clock"></i>Time</span><span class="ed-info-value">09:00 AM - 05:00 PM</span></div>
-            <div class="ed-info-row"><span class="ed-info-label"><i class="bi bi-geo-alt"></i>Venue</span><span class="ed-info-value">{{ data.venue }}</span></div>
-            <div class="ed-info-row"><span class="ed-info-label"><i class="bi bi-hourglass-split"></i>Deadline</span><span class="ed-info-value" :class="{ 'text-danger': data.hasDeadlinePassed }">{{ data.deadline || data.date }}<span v-if="data.hasDeadlinePassed" class="d-block small text-danger"><i class="bi bi-exclamation-circle me-1"></i>Registration deadline has been passed</span></span></div>
-            <div class="ed-info-divider"></div>
-            <div class="ed-info-row"><span class="ed-info-label"><i class="bi bi-people"></i>Available Seats</span><span class="ed-info-value ed-highlight">{{ data.availableSeats }}</span></div>
-            <div class="ed-info-row"><span class="ed-info-label"><i class="bi bi-person-check"></i>Registered</span><span class="ed-info-value">{{ data.registeredStudents }}</span></div>
-            <div class="ed-info-row"><span class="ed-info-label"><i class="bi bi-clock-history"></i>Duration</span><span class="ed-info-value">{{ data.duration }}</span></div>
-            <div class="ed-info-row"><span class="ed-info-label"><i class="bi bi-building"></i>Organized By</span><span class="ed-info-value">{{ data.organizedBy }}</span></div>
-            <div class="ed-info-row"><span class="ed-info-label"><i class="bi bi-cash"></i>Fee</span><span class="ed-info-value ed-highlight" style="color: #4ade80 !important;">{{ data.registrationFee }}</span></div>
-            <div class="ed-info-row"><span class="ed-info-label"><i class="bi bi-person-badge"></i>Contact</span><span class="ed-info-value">{{ data.contactPerson }}</span></div>
+            <div class="ed-info-row"><span class="ed-info-label"><i class="bi bi-calendar-event"></i>Date</span><span class="ed-info-value">{{ data.formattedDate }}</span></div>
+            <div class="ed-info-row"><span class="ed-info-label"><i class="bi bi-geo-alt"></i>Venue</span><span class="ed-info-value">{{ data.formattedVenue }}</span></div>
+            <div v-if="data.formattedDeadline" class="ed-info-row"><span class="ed-info-label"><i class="bi bi-hourglass-split"></i>Registration Deadline</span><span class="ed-info-value" :class="{ 'text-danger': data.hasDeadlinePassed }">{{ data.formattedDeadline }}<span v-if="data.hasDeadlinePassed" class="d-block small text-danger"><i class="bi bi-exclamation-circle me-1"></i>Registration deadline has passed</span></span></div>
+            <div class="ed-info-row"><span class="ed-info-label"><i class="bi bi-people"></i>Max Capacity</span><span class="ed-info-value ed-highlight">{{ data.max_participants }} Seats</span></div>
+            <div class="ed-info-row"><span class="ed-info-label"><i class="bi bi-flag"></i>Status</span><span class="ed-info-value" :class="data.status.toLowerCase()">{{ data.status }}</span></div>
             <div class="ed-info-divider"></div>
             <button class="ed-btn-register ed-btn-full" :class="{ 'ed-btn-disabled': data.hasDeadlinePassed && !isRegistered }" :disabled="data.hasDeadlinePassed && !isRegistered" @click="handleRegister">
               <i v-if="data.hasDeadlinePassed && !isRegistered" class="bi bi-x-circle me-2"></i>
@@ -104,12 +104,13 @@
       </div>
     </div>
 
-    <div v-if="data" class="ed-section-wrap" data-reveal="up">
+    <!-- Mentors Section - rendered only when mentors exist -->
+    <div v-if="!isLoading && data && data.speakers && data.speakers.length > 0" class="ed-section-wrap" data-reveal="up">
       <div class="ed-container">
         <div class="ed-section-header">
           <span class="ed-section-badge">Speakers</span>
-          <h2 class="ed-heading">Meet Your Mentors</h2>
-          <p class="ed-section-sub">Industry experts and faculty guiding this event.</p>
+          <h2 class="ed-heading">Meet Your Mentors & Speakers</h2>
+          <p class="ed-section-sub">Industry experts and speakers guiding this event.</p>
         </div>
         <div class="ed-speakers-grid">
           <div v-for="(speaker, i) in data.speakers" :key="i" class="ed-speaker-card" :style="{ transitionDelay: `${i * 0.1}s` }" data-reveal="up">
@@ -117,10 +118,10 @@
             <div class="ed-speaker-info">
               <h4 class="ed-speaker-name">{{ speaker.name }}</h4>
               <span class="ed-speaker-role">{{ speaker.role }}</span>
-              <span class="ed-speaker-dept">{{ speaker.dept }}</span>
-              <div class="ed-speaker-links">
-                <a :href="speaker.linkedin" class="ed-speaker-link" target="_blank"><i class="bi bi-linkedin"></i></a>
-                <a :href="'mailto:' + speaker.email" class="ed-speaker-link"><i class="bi bi-envelope-fill"></i></a>
+              <span v-if="speaker.dept" class="ed-speaker-dept">{{ speaker.dept }}</span>
+              <div class="ed-speaker-links" v-if="(speaker.linkedin && speaker.linkedin !== '#') || speaker.email">
+                <a v-if="speaker.linkedin && speaker.linkedin !== '#'" :href="speaker.linkedin" class="ed-speaker-link" target="_blank"><i class="bi bi-linkedin"></i></a>
+                <a v-if="speaker.email" :href="'mailto:' + speaker.email" class="ed-speaker-link"><i class="bi bi-envelope-fill"></i></a>
               </div>
             </div>
           </div>
@@ -128,97 +129,33 @@
       </div>
     </div>
 
-    <div v-if="data" class="ed-section-wrap ed-timeline-wrap" data-reveal="up">
-      <div class="ed-container">
-        <div class="ed-section-header">
-          <span class="ed-section-badge">Timeline</span>
-          <h2 class="ed-heading">Event Journey</h2>
-          <p class="ed-section-sub">Key milestones from registration to closing ceremony.</p>
-        </div>
-        <div class="ed-timeline">
-          <div v-for="(item, i) in data.timeline" :key="i" class="ed-timeline-item" :style="{ transitionDelay: `${i * 0.15}s` }" data-reveal="up">
-            <div class="ed-timeline-dot"><div class="ed-timeline-glow"></div></div>
-            <div class="ed-timeline-line" v-if="i < data.timeline.length - 1"></div>
-            <div class="ed-timeline-content">
-              <h4>{{ item.label }}</h4>
-              <span>{{ item.date }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="data" class="ed-section-wrap" data-reveal="up">
-      <div class="ed-container">
-        <div class="ed-section-header">
-          <span class="ed-section-badge">Gallery</span>
-          <h2 class="ed-heading">Event Highlights</h2>
-          <p class="ed-section-sub">Moments captured from our previous editions.</p>
-        </div>
-        <div class="ed-gallery-grid">
-          <div v-for="(img, i) in data.galleryImages" :key="i" class="ed-gallery-item" :class="{ 'ed-gallery-span-2': i === 0 }">
-            <div class="ed-gallery-img-wrap">
-              <img :src="img" :alt="'Gallery ' + (i+1)" loading="lazy" />
-              <div class="ed-gallery-overlay"><i class="bi bi-eye"></i></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="data" class="ed-cta-wrap" data-reveal="up">
-      <div class="ed-container">
-        <div class="ed-cta-box">
-          <h2 class="ed-cta-title">Ready to Join?</h2>
-          <p class="ed-cta-text">Secure your spot and be part of this amazing learning experience.</p>
-          <div class="ed-cta-benefits">
-            <div class="ed-benefit"><i class="bi bi-check-circle-fill"></i><span>{{ data.availableSeats }} Seats Remaining</span></div>
-            <div class="ed-benefit" :class="{ 'text-danger': data.hasDeadlinePassed }"><i class="bi bi-check-circle-fill"></i><span>Registration {{ data.hasDeadlinePassed ? 'deadline has been passed' : 'Ends ' + data.registrationEndsIn }}</span></div>
-            <div class="ed-benefit"><i class="bi bi-check-circle-fill"></i><span>Free Certificate</span></div>
-            <div class="ed-benefit"><i class="bi bi-check-circle-fill"></i><span>Snacks Included</span></div>
-          </div>
-          <button class="ed-btn-register ed-btn-cta" @click="handleRegister">
-            <i class="bi bi-check-circle me-2"></i>{{ isRegistered ? 'Registered ✓' : 'Register Now' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="similarEvents.length" class="ed-section-wrap ed-similar-wrap" data-reveal="up">
-      <div class="ed-container">
-        <div class="ed-section-header">
-          <span class="ed-section-badge">More Events</span>
-          <h2 class="ed-heading">Similar Events</h2>
-          <p class="ed-section-sub">Check out other exciting events from the club.</p>
-        </div>
-        <div class="row g-4">
-          <div v-for="sim in similarEvents" :key="sim.id" class="col-md-4">
-            <div class="event-card glass" @click="openEvent(sim)">
-              <div class="event-card-image" :style="{ backgroundImage: `url(${sim.image})` }">
-                <div class="event-image-overlay">
-                  <span class="event-date-badge">{{ sim.date }}</span>
-                </div>
-              </div>
-              <div class="event-card-body">
-                <h5 class="event-card-title">{{ sim.name }}</h5>
-                <p class="event-card-desc">{{ sim.description }}</p>
-              </div>
-              <div class="event-card-footer">
-                <span class="event-participants"><i class="bi bi-people-fill me-1"></i>{{ sim.participants }} seats</span>
-                <div class="d-flex align-items-center gap-2">
-                  <span class="event-status approved">{{ sim.status }}</span>
-                  <button class="btn-register-sm" @click.stop="openEvent(sim)">Details</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <RegistrationModal v-if="showRegModal" :event="event" @close="showRegModal = false" @registered="onRegistered" />
+    <RegistrationModal v-if="showRegModal" :event="rawEvent" @close="showRegModal = false" @registered="onRegistered" />
     <CalendarPickerModal v-if="showCalendarModal" @close="showCalendarModal = false" @selected="triggerCalendarToast" />
-    <VolunteerApplicationModal v-if="showVolModal" :event="event" @close="showVolModal = false" @submitted="onVolunteerApplied" />
+    <StudentProfileModal v-if="showProfileModal" @close="showProfileModal = false" @saved="onProfileSaved" />
+
+    <!-- Incomplete Profile Notice Modal -->
+    <Teleport to="body">
+      <div v-if="showIncompleteProfileModal" class="ed-modal-backdrop" @click.self="showIncompleteProfileModal = false">
+        <div class="ed-notice-modal">
+          <div class="ed-notice-icon-wrap">
+            <i class="bi bi-person-exclamation"></i>
+          </div>
+          <h3 class="ed-notice-title">Complete Your Profile First</h3>
+          <p class="ed-notice-desc">
+            To register for events, please complete your student profile (department, student ID, and technical interests).
+          </p>
+          <div class="ed-notice-actions">
+            <button class="ed-notice-btn-secondary" @click="goToDashboard">
+              <i class="bi bi-speedometer2 me-2"></i>Go to Dashboard
+            </button>
+            <button class="ed-notice-btn-primary" @click="openProfileModalFromNotice">
+              <i class="bi bi-person-gear me-2"></i>Complete Profile
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <div v-if="toast" class="ed-toast glass-toast"><i class="bi bi-check-circle-fill me-2" style="color: #4ade80;"></i>{{ toast }}</div>
     <div v-if="showCalendarToast" class="ed-toast glass-toast"><i class="bi bi-info-circle-fill me-2" style="color: #818cf8;"></i>{{ calendarToastMsg }}</div>
   </div>
@@ -228,9 +165,11 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { store } from '../store/mockData';
+import { fetchEventsApi, getPrivateEventApi, getEventApi } from '../api/events';
+import { getMyStudentProfileApi } from '../api/student';
 import RegistrationModal from './RegistrationModal.vue';
 import CalendarPickerModal from './shared/CalendarPickerModal.vue';
-import VolunteerApplicationModal from './shared/VolunteerApplicationModal.vue';
+import StudentProfileModal from './StudentProfileModal.vue';
 import { useCalendarToast } from '../composables/useCalendarToast';
 
 const route = useRoute();
@@ -238,110 +177,161 @@ const router = useRouter();
 const toast = ref('');
 const showRegModal = ref(false);
 const showCalendarModal = ref(false);
-const showVolModal = ref(false);
+const showProfileModal = ref(false);
+const showIncompleteProfileModal = ref(false);
+const rawEvent = ref(null);
+const isLoading = ref(true);
 
 const { show: showCalendarToast, message: calendarToastMsg, showCalendarToast: triggerCalendarToast } = useCalendarToast();
 
-const event = computed(() => store.events.find(e => e.name === decodeURIComponent(route.params.eventName)));
+const formatVenue = (v) => {
+  if (!v) return 'TBD';
+  return String(v).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return 'TBD';
+  try {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      const day = d.getDate();
+      const month = d.toLocaleDateString('en-US', { month: 'short' });
+      const year = d.getFullYear();
+      return `${day} ${month} ${year}`;
+    }
+  } catch {}
+  return dateStr;
+};
+
+const loadEventData = async () => {
+  isLoading.value = true;
+  const param = route.params.eventName || route.params.id;
+  if (!param) {
+    isLoading.value = false;
+    return;
+  }
+  const decoded = decodeURIComponent(param);
+  const token = store.token || localStorage.getItem('driven_token');
+
+  // If param is a UUID, attempt to fetch directly from backend API
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(param);
+  if (isUUID) {
+    try {
+      rawEvent.value = await getPrivateEventApi(param, token);
+      isLoading.value = false;
+      return;
+    } catch {
+      try {
+        rawEvent.value = await getEventApi(param);
+        isLoading.value = false;
+        return;
+      } catch {}
+    }
+  }
+
+  // Fetch list of events from backend API (independent of store)
+  try {
+    const list = await fetchEventsApi(token);
+    const found = list.find(e =>
+      String(e.id) === param ||
+      String(e.id) === decoded ||
+      e.name === decoded ||
+      encodeURIComponent(e.name) === param ||
+      e.name?.toLowerCase() === decoded?.toLowerCase()
+    );
+    if (found) {
+      try {
+        rawEvent.value = await getPrivateEventApi(found.id, token);
+      } catch {
+        rawEvent.value = found;
+      }
+    } else {
+      const storeFound = store.events.find(e =>
+        String(e.id) === param ||
+        String(e.id) === decoded ||
+        e.name === decoded ||
+        encodeURIComponent(e.name) === param ||
+        e.name?.toLowerCase() === decoded?.toLowerCase()
+      );
+      if (storeFound) rawEvent.value = storeFound;
+    }
+  } catch (err) {
+    console.error('Failed to load event:', err);
+    const storeFound = store.events.find(e =>
+      String(e.id) === param ||
+      String(e.id) === decoded ||
+      e.name === decoded ||
+      encodeURIComponent(e.name) === param ||
+      e.name?.toLowerCase() === decoded?.toLowerCase()
+    );
+    if (storeFound) rawEvent.value = storeFound;
+  } finally {
+    isLoading.value = false;
+  }
+};
 
 const data = computed(() => {
-  const e = event.value;
+  const e = rawEvent.value;
   if (!e) return null;
 
   const category = e.category
     ? (e.category.charAt(0).toUpperCase() + e.category.slice(1))
-    : (e.name.toLowerCase().includes('hackathon') ? 'Hackathon' : (e.name.toLowerCase().includes('seminar') ? 'Seminar' : 'Workshop'));
+    : 'Event';
 
-  // Live Agendas from Backend
-  const liveAgendas = Array.isArray(e.agendas) && e.agendas.length > 0
+  const rawStatus = (e.status || 'Pending').toLowerCase();
+  const status = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
+
+  // Live Agendas from Backend - only what exists
+  const agendas = Array.isArray(e.agendas) && e.agendas.length > 0
     ? e.agendas.map(a => ({
         time: [a.start_time ? String(a.start_time).slice(0, 5) : '', a.end_time ? String(a.end_time).slice(0, 5) : ''].filter(Boolean).join(' - ') || 'TBD',
         title: a.title || 'Session',
         desc: a.description || ''
       }))
-    : [
-        { time: '09:00 AM', title: 'Registration & Check-in', desc: 'Participants arrive and verify registration.' },
-        { time: '10:00 AM', title: 'Main Session', desc: e.description || 'Hands-on practical session.' },
-        { time: '04:00 PM', title: 'Q&A and Closing', desc: 'Open floor for questions and closing remarks.' }
-      ];
+    : [];
 
-  // Live Additional Info from Backend
-  const learningInfo = (e.additional_info || []).filter(i => i.section_type === 'learning').map(i => i.content);
-  const requirementInfo = (e.additional_info || []).filter(i => i.section_type === 'requirement').map(i => i.content);
-  const eligibilityInfo = (e.additional_info || []).filter(i => i.section_type === 'eligibility').map(i => i.content);
+  // Live Additional Info from Backend - only what exists
+  const additionalInfo = Array.isArray(e.additional_info) ? e.additional_info : [];
+  const whatYouLearn = additionalInfo.filter(i => i.section_type === 'learning' && i.content).map(i => i.content);
+  const requirements = additionalInfo.filter(i => i.section_type === 'requirement' && i.content).map(i => i.content);
+  const whoCanAttend = additionalInfo.filter(i => i.section_type === 'eligibility' && i.content).map(i => i.content);
 
-  const whatYouLearn = learningInfo.length > 0 ? learningInfo : [
-    'Core concepts and industry best practices',
-    'Hands-on experience with modern tools and technologies',
-    'Real-world project deployment workflows',
-  ];
-
-  const requirements = requirementInfo.length > 0 ? requirementInfo : [
-    'Basic programming fundamentals',
-    'Laptop with development environment installed',
-    'Enthusiasm to learn and build',
-  ];
-
-  const whoCanAttend = eligibilityInfo.length > 0 ? eligibilityInfo : [
-    'All undergraduate and postgraduate students',
-    'Open to all branches and departments',
-  ];
-
-  // Live Mentors from Backend
-  const liveMentors = Array.isArray(e.mentors) && e.mentors.length > 0
+  // Live Mentors from Backend - only what exists
+  const speakers = Array.isArray(e.mentors) && e.mentors.length > 0
     ? e.mentors.map(m => {
         const initials = m.name ? m.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'ME';
         return {
           name: m.name || 'Mentor',
-          role: m.designation || 'Industry Expert',
-          dept: m.company || 'Tech Partner',
+          role: m.designation || 'Speaker',
+          dept: m.company || '',
           avatar: initials,
           linkedin: m.linkedin_url || '#',
           email: m.email || ''
         };
       })
-    : [
-        { name: 'Faculty Lead', role: 'Event Coordinator', dept: 'Engineering Department', avatar: 'FL', linkedin: '#', email: '' }
-      ];
+    : [];
+
+  const deadlineDate = e.registration_deadline || e.deadline;
+  const hasDeadlinePassed = deadlineDate ? new Date(deadlineDate) < new Date() : false;
 
   return {
     ...e,
+    name: e.name,
     category,
-    image: e.cover_image_url || e.image || 'https://images.unsplash.com/photo-1553408227-108e3f4edef1?w=600&h=400&fit=crop',
-    tagline: e.short_description || e.tagline || `An immersive ${category.toLowerCase()} experience designed for college students to build real-world skills.`,
-    fullDescription: e.description || `${e.name} is designed to provide participants with hands-on experience and deep industry insights.`,
-    agenda: liveAgendas,
+    status,
+    image: e.cover_image_url || e.image || 'https://images.unsplash.com/photo-1553408227-108e3f4edef1?w=800&h=500&fit=crop',
+    tagline: e.short_description || e.tagline || '',
+    fullDescription: e.description || '',
+    agenda: agendas,
     whatYouLearn,
     requirements,
     whoCanAttend,
-    speakers: liveMentors,
-    timeline: [
-      { label: 'Registration Opens', date: 'Upcoming' },
-      { label: 'Registration Closes', date: e.deadline || e.date },
-      { label: 'Event Date', date: e.date },
-      { label: 'Main Sessions', date: e.date },
-      { label: 'Closing Ceremony', date: e.date },
-    ],
-    galleryImages: [
-      'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=800&h=600&fit=crop',
-    ],
-    registrationEndsIn: (() => {
-      if (!e.registration_deadline && !e.deadline) return 'N/A';
-      const target = new Date(e.registration_deadline || e.deadline);
-      const diff = Math.ceil((target - new Date()) / (1000 * 60 * 60 * 24));
-      if (diff < 0) return 'Closed';
-      if (diff === 0) return 'Today';
-      return `${diff} days`;
-    })(),
-    availableSeats: Math.max(1, (e.max_participants || e.participants || 50) - Math.floor((e.max_participants || e.participants || 50) * 0.35)),
-    registeredStudents: Math.min((e.max_participants || e.participants || 50) - 1, Math.floor((e.max_participants || e.participants || 50) * 0.35)),
-    duration: '1 Day',
-    organizedBy: 'Student Club Management',
-    registrationFee: 'Free',
-    contactPerson: liveMentors[0]?.name || 'Event Coordinator',
-    hasDeadlinePassed: (e.registration_deadline || e.deadline) ? new Date(e.registration_deadline || e.deadline) < new Date() : false,
+    speakers,
+    formattedDate: formatDate(e.event_date || e.date),
+    formattedVenue: formatVenue(e.venue),
+    formattedDeadline: deadlineDate ? formatDate(deadlineDate) : '',
+    max_participants: e.max_participants || e.participants || 50,
+    hasDeadlinePassed,
   };
 });
 
@@ -352,22 +342,46 @@ const canAddToCalendar = computed(() => {
   return isRegistered.value || !data.value.hasDeadlinePassed;
 });
 
-const similarEvents = computed(() => {
-  if (!event.value) return [];
-  return store.events.filter(e => e.id !== event.value.id).slice(0, 3);
-});
-
 const goBack = () => { router.back(); };
-const goHome = () => { router.push({ name: 'home' }); };
-const openEvent = (ev) => { router.push({ name: 'event-details', params: { eventName: encodeURIComponent(ev.name) } }); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
-const handleRegister = () => {
+const goToDashboard = () => {
+  showIncompleteProfileModal.value = false;
+  router.push({ name: 'student' });
+};
+
+const openProfileModalFromNotice = () => {
+  showIncompleteProfileModal.value = false;
+  showProfileModal.value = true;
+};
+
+const onProfileSaved = () => {
+  toast.value = 'Profile updated! You can now register for the event.';
+  setTimeout(() => { toast.value = ''; }, 3500);
+  showRegModal.value = true;
+};
+
+const handleRegister = async () => {
   if (!data.value) return;
   if (isRegistered.value) {
     toast.value = 'You are already registered for this event!';
     setTimeout(() => { toast.value = ''; }, 3000);
     return;
   }
+
+  const token = store.token || localStorage.getItem('driven_token');
+  if (token) {
+    try {
+      const studentProfile = await getMyStudentProfileApi(token);
+      if (!studentProfile || !studentProfile.department || !studentProfile.student_id) {
+        showIncompleteProfileModal.value = true;
+        return;
+      }
+    } catch {
+      showIncompleteProfileModal.value = true;
+      return;
+    }
+  }
+
   showRegModal.value = true;
 };
 
@@ -375,12 +389,6 @@ const onRegistered = () => {
   showRegModal.value = false;
   toast.value = `Successfully registered for ${data.value?.name}!`;
   setTimeout(() => { toast.value = ''; }, 3000);
-};
-
-const onVolunteerApplied = () => {
-  showVolModal.value = false;
-  toast.value = 'Volunteer application submitted successfully. You\'ll be notified once the club reviews your request.';
-  setTimeout(() => { toast.value = ''; }, 4000);
 };
 
 const shareEvent = () => {
@@ -394,7 +402,9 @@ const shareEvent = () => {
 };
 
 let observer = null;
-onMounted(() => {
+onMounted(async () => {
+  await loadEventData();
+
   observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -416,6 +426,15 @@ onUnmounted(() => { if (observer) observer.disconnect(); });
   min-height: 100vh;
   color: #e2e8f0;
   overflow-x: hidden;
+}
+
+.ed-loading-state {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
 }
 
 
@@ -658,33 +677,43 @@ onUnmounted(() => { if (observer) observer.disconnect(); });
   margin: 0;
 }
 
-.ed-agenda { position: relative; }
+.ed-agenda {
+  position: relative;
+}
 .ed-agenda-item {
   display: flex;
   gap: 1.25rem;
-  padding-bottom: 1.75rem;
   position: relative;
 }
-.ed-agenda-item:last-child { padding-bottom: 0; }
 .ed-agenda-time {
-  min-width: 90px;
-  font-size: 0.82rem;
+  min-width: 120px;
+  white-space: nowrap;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #818cf8;
   padding-top: 0.15rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+.ed-agenda-tracker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 16px;
 }
 .ed-agenda-dot {
-  position: relative;
-  flex-shrink: 0;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: rgba(79, 70, 229, 0.3);
+  background: rgba(79, 70, 229, 0.25);
   border: 2px solid #818cf8;
-  margin-top: 0.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
 }
 .ed-agenda-pulse {
   width: 6px;
@@ -693,27 +722,32 @@ onUnmounted(() => { if (observer) observer.disconnect(); });
   background: #818cf8;
   box-shadow: 0 0 8px rgba(129, 140, 248, 0.6);
 }
-.ed-agenda-item:not(:last-child) .ed-agenda-dot::after {
-  content: '';
-  position: absolute;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 1.5px;
-  height: calc(100% + 6px);
-  background: linear-gradient(180deg, rgba(129, 140, 248, 0.3), transparent);
+.ed-agenda-line {
+  flex: 1;
+  width: 2px;
+  background: linear-gradient(180deg, #818cf8 0%, rgba(129, 140, 248, 0.3) 100%);
+  margin-top: 4px;
+  margin-bottom: 4px;
+  min-height: 28px;
+}
+.ed-agenda-info {
+  flex: 1;
+  padding-bottom: 2rem;
+}
+.ed-agenda-item:last-child .ed-agenda-info {
+  padding-bottom: 0;
 }
 .ed-agenda-info h4 {
   font-size: 1rem;
   font-weight: 600;
   color: #f1f5f9;
-  margin: 0 0 0.3rem;
+  margin: 0 0 0.35rem;
 }
 .ed-agenda-info p {
   font-size: 0.88rem;
-  color: #64748b;
+  color: #94a3b8;
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .ed-list-grid {
@@ -845,30 +879,37 @@ onUnmounted(() => { if (observer) observer.disconnect(); });
 }
 
 .ed-speakers-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 1.5rem;
+  max-width: 960px;
+  margin: 0 auto;
 }
 .ed-speaker-card {
+  flex: 1 1 300px;
+  max-width: 420px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 1.25rem;
   padding: 1.5rem;
   background: rgba(18, 27, 48, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 18px;
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: default;
 }
 .ed-speaker-card:hover {
-  transform: translateY(-6px);
-  border-color: rgba(129, 140, 248, 0.2);
+  transform: translateY(-4px);
+  border-color: rgba(129, 140, 248, 0.25);
   background: rgba(22, 33, 55, 0.7);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 30px rgba(129, 140, 248, 0.05);
 }
 .ed-speaker-avatar {
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: linear-gradient(135deg, #4f46e5, #7c3aed);
   color: #fff;
@@ -876,50 +917,57 @@ onUnmounted(() => { if (observer) observer.disconnect(); });
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   flex-shrink: 0;
+  margin-top: 2px;
   box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
 }
-.ed-speaker-info { display: flex; flex-direction: column; min-width: 0; }
+.ed-speaker-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
 .ed-speaker-name {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: #f1f5f9;
-  margin: 0 0 0.2rem;
+  margin: 0 0 0.25rem;
 }
 .ed-speaker-role {
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   color: #818cf8;
   font-weight: 600;
-  margin-bottom: 0.1rem;
+  margin-bottom: 0.2rem;
 }
 .ed-speaker-dept {
-  font-size: 0.78rem;
-  color: #64748b;
-  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-bottom: 0.65rem;
 }
 .ed-speaker-links {
   display: flex;
   gap: 0.5rem;
+  margin-top: auto;
 }
 .ed-speaker-link {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #64748b;
+  color: #94a3b8;
   text-decoration: none;
   font-size: 0.85rem;
   transition: all 0.2s;
 }
 .ed-speaker-link:hover {
-  background: rgba(79, 70, 229, 0.15);
-  border-color: rgba(79, 70, 229, 0.2);
-  color: #818cf8;
+  background: rgba(129, 140, 248, 0.2);
+  border-color: rgba(129, 140, 248, 0.4);
+  color: #ffffff;
   transform: translateY(-2px);
 }
 
@@ -1092,6 +1140,114 @@ onUnmounted(() => { if (observer) observer.disconnect(); });
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* Notice Modal Styles */
+.ed-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: rgba(3, 5, 12, 0.78);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.ed-notice-modal {
+  width: 100%;
+  max-width: 480px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 2.25rem 2rem;
+  text-align: center;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(99, 102, 241, 0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: edNoticeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ed-notice-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.ed-notice-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  margin: 0 0 0.5rem;
+}
+
+.ed-notice-desc {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  line-height: 1.55;
+  margin-bottom: 1.75rem;
+}
+
+.ed-notice-actions {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.ed-notice-btn-secondary {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ed-notice-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.ed-notice-btn-primary {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 15px rgba(79, 70, 229, 0.35);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ed-notice-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.45);
+}
+
+@keyframes edNoticeIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 @media (max-width: 992px) {
   .ed-hero-content { padding: 2rem 1.5rem; }
   .ed-hero { min-height: 420px; }
@@ -1122,5 +1278,7 @@ onUnmounted(() => { if (observer) observer.disconnect(); });
   .ed-cta-title { font-size: 1.75rem; }
   .ed-section-wrap { padding: 3rem 0; }
   .ed-container { padding: 0 1.25rem; }
+  .ed-notice-actions { flex-direction: column; }
 }
 </style>
+

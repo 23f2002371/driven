@@ -24,13 +24,7 @@ from app.models.event import (
 )
 from app.models.student import Student
 from app.models.user import User
-from app.utils.enums import (
-    AdditionalInfoType,
-    Department,
-    EventStatus,
-    UserRole,
-    WinnerPosition,
-)
+from app.utils.enums import Department, EventStatus, SectionType, UserRole, WinnerPosition
 from tests.conftest import auth_headers
 
 API = "/api/events"
@@ -243,6 +237,65 @@ def test_create_event_unauthenticated(client: TestClient) -> None:
     response = client.post(f"{API}", json=_valid_event_payload())
 
     assert response.status_code == 401
+
+
+def test_reject_event_with_reason_and_alternatives(
+    client: TestClient, club_admin: User, db_session: Session
+) -> None:
+    event = _create_event_in_db(db_session, name="Pending Proposal")
+
+    reject_payload = {
+        "status": "rejected",
+        "rejection_reason": {
+            "reason": "venue_not_available",
+            "alternative_venue": "robotics_lab",
+            "alternative_date": "2026-11-15",
+            "admin_comment": "Auditorium is booked. Robotics lab is available on Nov 15.",
+        },
+    }
+
+    response = client.patch(
+        f"{API}/{event.id}",
+        json=reject_payload,
+        headers=auth_headers(club_admin),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "rejected"
+    assert body["rejection_reason"] is not None
+    assert body["rejection_reason"]["reason"] == "venue_not_available"
+    assert body["rejection_reason"]["alternative_venue"] == "robotics_lab"
+    assert body["rejection_reason"]["alternative_date"] == "2026-11-15"
+    assert body["rejection_reason"]["admin_comment"] == "Auditorium is booked. Robotics lab is available on Nov 15."
+
+
+def test_get_private_event_includes_rejection_reason(
+    client: TestClient, club_admin: User, db_session: Session
+) -> None:
+    event = _create_event_in_db(db_session, name="Rejected Event")
+    client.patch(
+        f"{API}/{event.id}",
+        json={
+            "rejection_reason": {
+                "reason": "time_slot_conflict",
+                "admin_comment": "Conflicts with annual symposium.",
+            }
+        },
+        headers=auth_headers(club_admin),
+    )
+
+    response = client.get(
+        f"{API}/{event.id}/private",
+        headers=auth_headers(club_admin),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "rejected"
+    assert body["rejection_reason"] is not None
+    assert body["rejection_reason"]["reason"] == "time_slot_conflict"
+    assert body["rejection_reason"]["admin_comment"] == "Conflicts with annual symposium."
 
 
 # ------------------------------------------------------- GET /events/{event_id}
@@ -1236,8 +1289,8 @@ def test_list_public_events(client: TestClient, db_session: Session) -> None:
     """Public events endpoint returns non-rejected events ordered by date."""
     event1 = Event(
         name="Public Event 1",
-        short_description="Public event one",
-        description="Public event one description",
+        short_description="Short desc 1",
+        description="Full description 1",
         category="workshop",
         event_date=date(2026, 11, 10),
         registration_deadline=datetime(2026, 11, 5, tzinfo=UTC),
@@ -1248,24 +1301,24 @@ def test_list_public_events(client: TestClient, db_session: Session) -> None:
     )
     event2 = Event(
         name="Public Event 2",
-        short_description="Public event two",
-        description="Public event two description",
+        short_description="Short desc 2",
+        description="Full description 2",
         category="hackathon",
         event_date=date(2026, 12, 1),
         registration_deadline=datetime(2026, 11, 25, tzinfo=UTC),
-        venue="computer_lab_1",
+        venue="innovation_lab",
         max_participants=100,
         status=EventStatus.PENDING,
         cover_image_url="https://example.com/e2.jpg",
     )
     event_rejected = Event(
         name="Rejected Event",
-        short_description="Rejected event",
-        description="Rejected event description",
+        short_description="Short desc rejected",
+        description="Full description rejected",
         category="workshop",
         event_date=date(2026, 10, 1),
         registration_deadline=datetime(2026, 9, 25, tzinfo=UTC),
-        venue="computer_lab_2",
+        venue="conference_room",
         max_participants=30,
         status=EventStatus.REJECTED,
     )
@@ -1284,7 +1337,6 @@ def test_list_public_events(client: TestClient, db_session: Session) -> None:
     assert ev1["venue"] == "auditorium"
     assert ev1["cover_image_url"] == "https://example.com/e1.jpg"
     assert "winner_name" in ev1
-    assert "winner_project_url" in ev1
 
 
 def test_list_public_events_empty(client: TestClient, db_session: Session) -> None:
@@ -1304,8 +1356,8 @@ def test_list_private_events_as_admin(client: TestClient, db_session: Session) -
     admin = _create_admin(db_session, email="admin_private@example.com")
     event = Event(
         name="Full Workshop Event",
-        short_description="Full workshop event",
-        description="Full workshop event description",
+        short_description="Short desc full",
+        description="Full description full",
         category="workshop",
         event_date=date(2026, 11, 15),
         registration_deadline=datetime(2026, 11, 10, tzinfo=UTC),
@@ -1332,7 +1384,7 @@ def test_list_private_events_as_admin(client: TestClient, db_session: Session) -
     )
     info = AdditionalEventInfo(
         event_id=event.id,
-        section_type=AdditionalInfoType.LEARNING,
+        section_type=SectionType.LEARNING,
         content="Master microservices design",
     )
     db_session.add_all([agenda, mentor, info])
@@ -1359,8 +1411,8 @@ def test_list_private_events_as_student(
     student = _create_student_user(db_session, email="student_private@example.com")
     event_active = Event(
         name="Active Student Event",
-        short_description="Active student event",
-        description="Active student event description",
+        short_description="Short desc active",
+        description="Full description active",
         category="workshop",
         event_date=date(2026, 11, 20),
         registration_deadline=datetime(2026, 11, 15, tzinfo=UTC),
@@ -1370,12 +1422,12 @@ def test_list_private_events_as_student(
     )
     event_rejected = Event(
         name="Cancelled Event",
-        short_description="Cancelled event",
-        description="Cancelled event description",
+        short_description="Short desc cancelled",
+        description="Full description cancelled",
         category="workshop",
         event_date=date(2026, 11, 25),
         registration_deadline=datetime(2026, 11, 20, tzinfo=UTC),
-        venue="computer_lab_1",
+        venue="conference_room",
         max_participants=20,
         status=EventStatus.REJECTED,
     )

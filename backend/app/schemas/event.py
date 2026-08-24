@@ -14,6 +14,7 @@ from app.utils.enums import (
     CertificateType,
     Department,
     EventCategory,
+    EventRejectionReason,
     EventStatus,
     EventVenue,
     RegistrationStatus,
@@ -52,6 +53,33 @@ class MentorItem(BaseModel):
     designation: str | None = Field(default=None, max_length=100)
     email: EmailStr | None = None
     linkedin_url: str | None = None
+
+
+# -------------------------------------------------- Event Rejection Reason
+class EventRejectReasonBase(BaseModel):
+    """Base fields for an event rejection reason."""
+
+    reason: EventRejectionReason
+    alternative_venue: EventVenue | None = None
+    alternative_date: date | None = None
+    admin_comment: str | None = None
+
+
+class EventRejectReasonCreate(EventRejectReasonBase):
+    """Payload to record why an event was rejected."""
+
+    pass
+
+
+class EventRejectReasonResponse(EventRejectReasonBase):
+    """Full representation of an event rejection reason."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    event_id: UUID
+    created_at: datetime
+    updated_at: datetime
 
 
 # ---------------------------------------------------------------- Event
@@ -98,6 +126,7 @@ class EventUpdate(BaseModel):
     agendas: list[AgendaItem] | None = None
     additional_info: list[AdditionalInfoItem] | None = None
     mentors: list[MentorItem] | None = None
+    rejection_reason: EventRejectReasonCreate | None = None
 
 
 class EventResponse(BaseModel):
@@ -140,6 +169,7 @@ class PrivateEventResponse(BaseModel):
     agendas: list[AgendaItem] = []
     additional_info: list[AdditionalInfoItem] = []
     mentors: list[MentorItem] = []
+    rejection_reason: EventRejectReasonResponse | None = None
 
 
 # ---------------------------------------------------------- Registration
@@ -226,6 +256,23 @@ class EventRegistrationResponse(BaseModel):
     attendance_status: AttendanceStatus
     student: StudentProfile
     event: EventResponse
+
+
+class RegistrationVerifyRequest(BaseModel):
+    """Payload to verify an event registration pass."""
+
+    qr_data: str | None = None
+    registration_id: UUID | None = None
+
+
+class RegistrationVerifyResponse(BaseModel):
+    """Result of scanning and verifying an event pass."""
+
+    success: bool
+    message: str
+    already_marked: bool
+    scanned_at: datetime
+    registration: EventRegistrationResponse
 
 
 # -------------------------------------------------------------- Winner

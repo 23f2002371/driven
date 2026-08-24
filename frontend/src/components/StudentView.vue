@@ -13,10 +13,11 @@
           <h5 class="std-topbar-title">Student Portal</h5>
          </div>
         <div class="std-topbar-right">
-          <button class="std-icon-btn"><i class="bi bi-search"></i></button>
-          <button class="std-icon-btn" @click="goToNotifications"><i class="bi bi-bell"></i><span v-if="studentNotifCount > 0" class="std-badge">{{ studentNotifCount > 99 ? '99+' : studentNotifCount }}</span></button>
+          <button class="std-icon-btn" title="Search"><i class="bi bi-search"></i></button>
+          <button class="std-icon-btn" title="Notifications" @click="goToNotifications"><i class="bi bi-bell"></i><span v-if="studentNotifCount > 0" class="std-badge">{{ studentNotifCount > 99 ? '99+' : studentNotifCount }}</span></button>
+          <button class="std-profile-btn" @click="showProfileModal = true"><i class="bi bi-person-gear me-1"></i>Profile</button>
           <span class="std-role-badge">Student Member</span>
-          <div class="std-avatar">{{ userInitials }}</div>
+          <div class="std-avatar" style="cursor: pointer;" title="Edit Profile" @click="showProfileModal = true">{{ userInitials }}</div>
         </div>
       </nav>
 
@@ -89,25 +90,27 @@
               <div class="event-card-img-sm" :style="{ backgroundImage: `url(${event.image})` }">
                 <div class="event-img-overlay d-flex justify-content-between align-items-start p-2">
                   <span class="status-badge status-ongoing">Ongoing</span>
-                  <span class="event-date-tag-sm"><i class="bi bi-calendar3 me-1"></i>{{ formatDate(event.date) }}</span>
+                  <span class="event-date-tag-sm"><i class="bi bi-calendar3 me-1"></i>{{ formatDate(event.date || event.event_date) }}</span>
                 </div>
               </div>
               <div class="p-3 d-flex flex-column flex-grow-1 justify-content-between">
                 <div>
                   <h6 class="fw-bold text-light mb-1" style="color: #f1f5f9 !important;">{{ event.name }}</h6>
-                  <p class="text-secondary small m-0" style="color: #94a3b8 !important;"><i class="bi bi-geo-alt-fill me-1"></i>{{ event.venue }}</p>
+                  <p class="text-secondary small m-0" style="color: #94a3b8 !important;"><i class="bi bi-geo-alt-fill me-1"></i>{{ formatVenue(event.venue) }}</p>
                 </div>
                 <div v-if="(store.registeredEvents || []).includes(event.id)" class="d-flex align-items-center gap-2 mt-3">
-                  <button class="btn-dashboard-primary btn-sm flex-grow-1" disabled style="opacity: 0.85;">
+                  <button class="btn-dashboard-primary btn-sm" disabled style="opacity: 0.85;">
                     <i class="bi bi-check-circle-fill me-1"></i>Registered
                   </button>
                   <button class="btn-calendar-sm" title="Add to Calendar" @click.stop="openCalendarForEvent(event)">
                     <i class="bi bi-calendar-plus"></i>
                   </button>
                 </div>
-                <button v-else class="btn-dashboard-primary btn-sm w-100 mt-3" @click.stop="openEventDetails(event)">
-                  View Details & Register
-                </button>
+                <div v-else class="mt-3">
+                  <button class="btn-dashboard-primary btn-sm" @click.stop="openEventDetails(event)">
+                    View Details & Register
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -139,14 +142,14 @@
             <div class="card-glass p-0 h-100 d-flex flex-column event-card-hover overflow-hidden" @click="openEventDetails(event)">
               <div class="event-card-img" :style="{ backgroundImage: `url(${event.image})` }">
                 <div class="event-img-overlay d-flex justify-content-between align-items-start p-3">
-                  <span class="event-date-tag"><i class="bi bi-calendar3 me-1"></i>{{ event.date }}</span>
+                  <span class="event-date-tag"><i class="bi bi-calendar3 me-1"></i>{{ formatDate(event.date || event.event_date) }}</span>
                   <span v-if="isEventOver(event) && !store.registeredEvents.includes(event.id)" class="std-closed-badge">Closed</span>
                  </div>
               </div>
               <div class="p-3 d-flex flex-column flex-grow-1">
                 <h5 class="fw-bold text-light mb-1">{{ event.name }}</h5>
                 <p class="text-secondary small mb-2 flex-grow-1">{{ event.description }}</p>
-                <div class="text-secondary small mb-2"><i class="bi bi-geo-alt-fill me-1"></i>{{ event.venue }}</div>
+                <div class="text-secondary small mb-2"><i class="bi bi-geo-alt-fill me-1"></i>{{ formatVenue(event.venue) }}</div>
                 <div v-if="store.registeredEvents.includes(event.id)" class="d-flex align-items-center gap-2 mt-2">
                   <button class="btn-dashboard-primary btn-sm flex-grow-1" disabled>
                     <i class="bi bi-check-circle-fill me-1"></i>Registered
@@ -270,21 +273,15 @@
           class="mb-3"
         />
         <InventoryGrid
-          :items="store.inventory"
+          :items="liveInventory"
+          :loading="isInventoryLoading"
           @borrow="studentBorrow"
           @return="studentReturn"
         />
       </div>
 
-      <div v-else-if="currentTab === 'support'">
-        <CopilotRecommendation
-          title="AI Analysis"
-          icon="search-heart-fill"
-          message="Found 3 similar resolved issues that match this ticket description."
-          action="View Similar"
-          class="mb-3"
-        />
-        <StudentSupportDesk :tickets="store.tickets" @ticket-submitted="refreshTickets" />
+      <div v-else-if="currentTab === 'support'" class="pt-3">
+        <SupportDeskDiscussionHub :is-admin="false" />
       </div>
 
       <div v-else-if="currentTab === 'bounties'" class="pt-3">
@@ -369,6 +366,7 @@
 <CalendarPickerModal v-if="showCalendarModal" @close="showCalendarModal = false" @selected="triggerCalendarToast" />
 <EventPassModal v-if="showPassModal && selectedPassEvent" :event="selectedPassEvent" @close="showPassModal = false" />
 <CertificateModal v-if="showCertModal && selectedCert" :cert="selectedCert" @close="showCertModal = false" />
+<StudentProfileModal v-if="showProfileModal" @close="showProfileModal = false" />
 <div v-if="showCalendarToast" class="std-toast"><i class="bi bi-info-circle-fill me-2" style="color:#818cf8;"></i>{{ calendarToastMsg }}</div>
 </template>
 
@@ -376,14 +374,11 @@
 import { ref, computed, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { store } from '../store/mockData';
+import { fetchEquipmentApi } from '../api/inventory';
 
-onMounted(() => {
-  store.fetchEvents();
-});
 import Sidebar from './shared/Sidebar.vue';
 import InventoryGrid from './shared/InventoryGrid.vue';
-import StudentSupportDesk from './shared/StudentSupportDesk.vue';
-import CopilotRecommendation from './shared/CopilotRecommendation.vue';
+import SupportDeskDiscussionHub from './shared/SupportDeskDiscussionHub.vue';
 import CalendarPickerModal from './shared/CalendarPickerModal.vue';
 import EventPassCard from './shared/EventPassCard.vue';
 import EventPassModal from './shared/EventPassModal.vue';
@@ -391,12 +386,15 @@ import CertificateCard from './shared/CertificateCard.vue';
 import CertificateModal from './shared/CertificateModal.vue';
 import CampusBountyStudent from './CampusBountyStudent.vue';
 import VolunteerView from './shared/VolunteerView.vue';
+import StudentProfileModal from './StudentProfileModal.vue';
+import { getMyEventRegistrationsApi } from '../api/qr';
 import { useCalendarToast } from '../composables/useCalendarToast';
 
 const router = useRouter();
 const { show: showCalendarToast, message: calendarToastMsg, showCalendarToast: triggerCalendarToast } = useCalendarToast();
 const calendarEventTarget = ref(null);
 const showCalendarModal = ref(false);
+const showProfileModal = ref(false);
 const showPassModal = ref(false);
 const selectedPassEvent = ref(null);
 const showCertModal = ref(false);
@@ -404,6 +402,38 @@ const selectedCert = ref(null);
 const certTypeFilter = ref('All');
 const certSortBy = ref('newest');
 const certSearchQuery = ref('');
+
+const liveInventory = ref([]);
+const isInventoryLoading = ref(false);
+
+const loadInventory = async () => {
+  isInventoryLoading.value = true;
+  try {
+    const token = store.token || localStorage.getItem('driven_token');
+    const data = await fetchEquipmentApi(token);
+    if (Array.isArray(data)) {
+      liveInventory.value = data.map((eq) => ({
+        id: eq.id,
+        name: eq.name,
+        category: eq.category,
+        description: eq.description || '',
+        available: eq.available_quantity,
+        borrowed: Math.max(0, eq.total_quantity - eq.available_quantity),
+        total_quantity: eq.total_quantity,
+        available_quantity: eq.available_quantity,
+        storage_location: eq.storage_location,
+        location: eq.storage_location || 'Campus Lab',
+        image: eq.equipment_image_url || 'https://images.unsplash.com/photo-1581092335397-9583eb92d232?w=400&h=300&fit=crop',
+        equipment_image_url: eq.equipment_image_url,
+      }));
+    }
+  } catch (err) {
+    console.error('Failed to load inventory for student:', err);
+    liveInventory.value = [];
+  } finally {
+    isInventoryLoading.value = false;
+  }
+};
 
 const shareCert = (cert) => {
   const toast = document.createElement('div');
@@ -418,9 +448,56 @@ const openCalendarForEvent = (event) => {
   showCalendarModal.value = true;
 };
 
-const registeredEventsList = computed(() =>
-  store.events.filter(e => store.registeredEvents.includes(e.id))
-);
+const liveRegistrations = ref([]);
+
+const loadMyRegistrations = async () => {
+  const token = store.token || localStorage.getItem('driven_token');
+  if (token) {
+    try {
+      const list = await getMyEventRegistrationsApi(token);
+      if (Array.isArray(list)) {
+        liveRegistrations.value = list;
+        list.forEach(r => {
+          if (!store.registeredEvents.includes(r.event_id)) {
+            store.registeredEvents.push(r.event_id);
+          }
+        });
+      }
+    } catch {}
+  }
+};
+
+onMounted(() => {
+  store.fetchEvents();
+  loadMyRegistrations();
+  loadInventory();
+});
+
+const registeredEventsList = computed(() => {
+  if (liveRegistrations.value.length > 0) {
+    return liveRegistrations.value.map(reg => {
+      const ev = reg.event || {};
+      const foundStoreEvent = store.events.find(e => e.id === reg.event_id) || {};
+      const img = ev.cover_image_url || ev.image || foundStoreEvent.cover_image_url || foundStoreEvent.image || 'https://images.unsplash.com/photo-1553408227-108e3f4edef1?w=600&h=400&fit=crop';
+      return {
+        ...foundStoreEvent,
+        ...ev,
+        id: reg.event_id,
+        registration_id: reg.id,
+        team_name: reg.team_name,
+        qr_code_url: reg.qr_code_url,
+        attendance_status: reg.attendance_status,
+        student: reg.student,
+        image: img,
+        cover_image_url: img,
+        name: ev.name || foundStoreEvent.name || 'Event Pass',
+        date: ev.date || ev.event_date || foundStoreEvent.date || 'TBD',
+        venue: ev.venue || foundStoreEvent.venue || 'Campus Facility',
+      };
+    });
+  }
+  return store.events.filter(e => store.registeredEvents.includes(e.id));
+});
 const filteredCerts = computed(() => {
   let result = [...store.certificates];
   if (certTypeFilter.value !== 'All') {
@@ -472,8 +549,22 @@ const assignedVolunteerWork = computed(() =>
 );
 
 const formatDate = (dateStr) => {
-  const parts = dateStr.split(' ');
-  return parts.length >= 2 ? parts[1].replace(',', '') : dateStr;
+  if (!dateStr) return 'TBD';
+  try {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      const day = d.getDate();
+      const month = d.toLocaleDateString('en-US', { month: 'short' });
+      const year = d.getFullYear();
+      return `${day} ${month} ${year}`;
+    }
+  } catch {}
+  return dateStr;
+};
+
+const formatVenue = (v) => {
+  if (!v) return 'TBD';
+  return String(v).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 };
 
 const isDeadlinePassed = (event) => {
@@ -632,6 +723,24 @@ const refreshTickets = () => {};
   background: rgba(52,211,153,0.1);
   color: #34d399;
   border: 1px solid rgba(52,211,153,0.12);
+}
+.std-profile-btn {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(129, 140, 248, 0.28);
+  color: #c7d2fe;
+  padding: 0.28rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.std-profile-btn:hover {
+  background: rgba(99, 102, 241, 0.3);
+  border-color: rgba(165, 180, 252, 0.5);
+  color: #ffffff;
 }
 .std-avatar {
   width: 30px;

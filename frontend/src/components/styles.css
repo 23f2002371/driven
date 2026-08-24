@@ -1670,25 +1670,37 @@ select.auth-input option {
 
 /* Dashboard Buttons */
 .btn-dashboard-primary {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  border: none;
-  color: #fff;
-  padding: 0.6rem 1.5rem;
-  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.5) 0%, rgba(124, 58, 237, 0.6) 100%);
+  border: 1px solid rgba(165, 180, 252, 0.35);
+  color: #ffffff;
+  padding: 0.5rem 1.25rem;
+  border-radius: 10px;
   font-weight: 600;
-  font-size: 0.9rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
+  box-shadow: none;
 }
 .btn-dashboard-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.7) 0%, rgba(124, 58, 237, 0.8) 100%);
+  border-color: rgba(199, 210, 254, 0.6);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: none;
+}
+.btn-dashboard-primary:active {
+  transform: translateY(0);
 }
 .btn-dashboard-primary.btn-sm {
-  padding: 0.4rem 1rem;
-  font-size: 0.8rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.78rem;
+  border-radius: 8px;
 }
 .btn-dashboard-secondary {
   background: rgba(255, 255, 255, 0.06);

@@ -5,7 +5,7 @@
       <div class="bg-glow glow-2"></div>
     </div>
 
-    <Sidebar :nav-items="navItems" :active-tab="currentTab" @update:active-tab="currentTab = $event" />
+    <Sidebar :nav-items="navItems" :active-tab="currentTab" @update:active-tab="handleTabChange" />
 
     <div class="main-wrapper">
       <nav class="top-navbar">
@@ -51,12 +51,12 @@
             </div>
             <div class="col-md-4">
               <div class="metric-card">
-                <div class="metric-icon-wrap amber"><i class="bi bi-chat-dots-fill"></i></div>
+                <div class="metric-icon-wrap amber"><i class="bi bi-chat-square-text-fill"></i></div>
                 <div class="metric-body">
-                  <span class="metric-label">Pending Tickets</span>
+                  <span class="metric-label">Discussion Threads</span>
                   <div class="metric-value-row">
-                    <span class="metric-value">{{ openTicketsCount }}</span>
-                    <span class="metric-trend down"><i class="bi bi-arrow-down-short"></i>-1</span>
+                    <span class="metric-value">{{ clubEventsList.length }}</span>
+                    <span class="metric-trend up"><i class="bi bi-arrow-up-short"></i>Active</span>
                   </div>
                 </div>
               </div>
@@ -64,7 +64,7 @@
           </div>
 
           <div class="action-buttons-container mb-4">
-            <button class="btn-create-event" @click="currentTab = 'create_event'">
+            <button class="btn-create-event" @click="openCreateEventTab">
               <i class="bi bi-plus-lg me-2"></i>Create Event
             </button>
             <button class="btn-manage-inventory" @click="currentTab = 'inventory'">
@@ -85,7 +85,16 @@
                 <div class="event-info">
                   <div class="event-name-row">
                     <h6 class="event-name">{{ event.name }}</h6>
-                    <span class="event-status" :class="event.status === 'Approved' ? 'approved' : 'pending'">{{ event.status }}</span>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="event-status" :class="(event.status || 'pending').toLowerCase()">{{ event.status }}</span>
+                      <button
+                        v-if="event.status === 'Rejected' || event.rawStatus === 'rejected'"
+                        class="btn-rejection-detail-sm"
+                        @click.stop="openRejectionModal(event)"
+                      >
+                        <i class="bi bi-exclamation-octagon me-1"></i>Rejection Detail
+                      </button>
+                    </div>
                   </div>
                   <div class="event-meta">
                     <span><i class="bi bi-geo-alt"></i>{{ event.venue }}</span>
@@ -101,7 +110,7 @@
         <div v-else-if="currentTab === 'events'" class="pt-3">
           <div class="d-flex justify-content-between align-items-center mb-4">
             <h5 class="fw-bold m-0 text-light">All Club Events</h5>
-            <button class="btn-primary-premium btn-sm" @click="currentTab = 'create_event'"><i class="bi bi-plus-lg me-1"></i>New Event</button>
+            <button class="btn-primary-premium btn-sm" @click="openCreateEventTab"><i class="bi bi-plus-lg me-1"></i>New Event</button>
           </div>
           <CopilotRecommendation
             title="AI Recommendation"
@@ -116,20 +125,27 @@
                 <div class="event-card-img" :style="{ backgroundImage: `url(${event.image})` }">
                   <div class="event-img-overlay d-flex justify-content-between align-items-start p-3">
                     <span class="event-date-tag"><i class="bi bi-calendar3 me-1"></i>{{ event.date }}</span>
-                    <span class="event-status" :class="event.status === 'Approved' ? 'approved' : 'pending'">{{ event.status }}</span>
+                    <span class="event-status" :class="(event.status || 'pending').toLowerCase()">{{ event.status }}</span>
                   </div>
                 </div>
                 <div class="p-3 d-flex flex-column flex-grow-1">
                   <h6 class="fw-bold text-light mb-1">{{ event.name }}</h6>
                   <p class="text-secondary small mb-2 flex-grow-1">{{ event.description }}</p>
                   <div class="event-meta">
-                    <span><i class="bi bi-geo-alt-fill me-1"></i>{{ event.venue }}</span>
+                    <span><i class="bi bi-geo-alt-fill me-1"></i>{{ formatVenue(event.venue) }}</span>
                     <span><i class="bi bi-people-fill me-1"></i>{{ event.participants }} Max</span>
                   </div>
-                  <div class="d-flex align-items-center gap-2 mt-2">
+                  <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
                     <button class="btn-dashboard-primary btn-sm" @click.stop="openEventDetails(event)">View Details</button>
                     <button v-if="event.status === 'Approved'" class="btn-calendar-admin" title="Add to Calendar" @click.stop="openCalendarForEvent(event)">
                       <i class="bi bi-calendar-plus"></i>
+                    </button>
+                    <button
+                      v-if="event.status === 'Rejected' || event.rawStatus === 'rejected'"
+                      class="btn-rejection-detail btn-sm"
+                      @click.stop="openRejectionModal(event)"
+                    >
+                      <i class="bi bi-exclamation-octagon me-1"></i>Rejection Detail
                     </button>
                   </div>
                 </div>
@@ -144,8 +160,8 @@
             <div class="ce-hero-inner">
               <div class="ce-hero-left">
                 <div>
-                  <h1 class="ce-page-title">Create Event</h1>
-                  <p class="ce-page-sub">Design your next workshop, hackathon, or seminar. Fill in the core details, configure the agenda and mentors, and submit for approval.</p>
+                  <h1 class="ce-page-title">{{ editingEventId ? 'Update & Resubmit Event' : 'Create Event' }}</h1>
+                  <p class="ce-page-sub">{{ editingEventId ? 'Modify event details according to administrator review feedback and resubmit for approval.' : 'Design your next workshop, hackathon, or seminar. Fill in the core details, configure the agenda and mentors, and submit for approval.' }}</p>
                 </div>
               </div>
               <div class="ce-hero-right" :style="sceneParallax">
@@ -630,33 +646,34 @@
               </button>
               <button v-else type="button" class="ce-btn-primary submit-btn" :disabled="isSubmitting" @click="submitNewEvent">
                 <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                <i v-else class="bi bi-send-check-fill me-2"></i>
-                {{ isSubmitting ? 'Submitting...' : 'Submit for Approval' }}
+                <i v-else :class="editingEventId ? 'bi bi-arrow-repeat me-2' : 'bi bi-send-check-fill me-2'"></i>
+                {{ isSubmitting ? 'Submitting...' : (editingEventId ? 'Update & Resubmit for Approval' : 'Submit for Approval') }}
               </button>
             </div>
           </div>
         </div>
 
         <div v-else-if="currentTab === 'inventory'" class="pt-3">
-          <CopilotRecommendation
-            title="AI Alert"
-            icon="exclamation-triangle-fill"
-            message="Only 3 Arduino Uno boards remaining. Current stock may not last the week."
-            action="Generate Procurement"
-            class="mb-3"
+          <InventoryGrid
+            :items="liveInventory.length ? liveInventory : store.inventory"
+            :loading="isInventoryLoading"
+            :is-admin="true"
+            :borrow-records="liveBorrowRecords"
+            :is-borrow-loading="isBorrowRecordsLoading"
+            @borrow="borrowItem"
+            @add-item="addNewInventoryItem"
+            @add-stock="addStock"
+            @admin-return="handleAdminReturn"
+            @refresh-borrows="loadBorrowRecords"
           />
-          <InventoryGrid :items="store.inventory" :is-admin="true" @borrow="borrowItem" @add-item="addNewInventoryItem" @add-stock="addStock" />
+        </div>
+
+        <div v-else-if="currentTab === 'scanner'" class="pt-3">
+          <ClubAdminEquipmentScanner @equipment-returned="loadInventory(); loadBorrowRecords();" />
         </div>
 
         <div v-else-if="currentTab === 'support'" class="pt-3">
-          <CopilotRecommendation
-            title="AI Analysis"
-            icon="search-heart-fill"
-            message="Found 3 similar resolved issues that match this ticket description."
-            action="View Similar"
-            class="mb-3"
-          />
-          <SupportDesk :tickets="store.tickets" @reply="handleReply" @resolve="handleResolve" />
+          <SupportDeskDiscussionHub :is-admin="true" />
         </div>
 
         <div v-else-if="currentTab === 'bounties'" class="pt-3">
@@ -692,24 +709,179 @@
       </div>
     </div>
     <CalendarPickerModal v-if="showCalendarModal" @close="showCalendarModal = false" @selected="triggerCalendarToast" />
+
+    <!-- ─── REJECTION DETAILS MODAL ─── -->
+    <transition name="modal-fade">
+      <div v-if="showRejectionModal && rejectionModalEvent" class="ca-modal-overlay" @click.self="closeRejectionModal">
+        <div class="ca-rejection-modal">
+          <div class="ca-rm-header">
+            <div class="ca-rm-icon"><i class="bi bi-exclamation-octagon-fill"></i></div>
+            <div class="flex-grow-1">
+              <h4 class="ca-rm-title">Rejection Details</h4>
+              <span class="ca-rm-sub">Feedback for <strong>{{ rejectionModalEvent.name }}</strong></span>
+            </div>
+            <button class="ca-rm-close" @click="closeRejectionModal"><i class="bi bi-x-lg"></i></button>
+          </div>
+
+          <div class="ca-rm-body">
+            <div class="ca-rm-field">
+              <label class="ca-rm-label"><i class="bi bi-shield-x me-1 text-danger"></i>Reason for Rejection</label>
+              <div class="ca-rm-val-box ca-rm-reason">
+                {{ humanizeRejectionReason(rejectionModalEvent.rejection_reason?.reason) }}
+              </div>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="ca-rm-field">
+                  <label class="ca-rm-label"><i class="bi bi-geo-alt-fill me-1 text-warning"></i>Suggested Alternative Venue</label>
+                  <div class="ca-rm-val-box">
+                    {{ formatVenue(rejectionModalEvent.rejection_reason?.alternative_venue) || 'None suggested' }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="ca-rm-field">
+                  <label class="ca-rm-label"><i class="bi bi-calendar-event me-1 text-info"></i>Suggested Alternative Date</label>
+                  <div class="ca-rm-val-box">
+                    {{ rejectionModalEvent.rejection_reason?.alternative_date || 'None suggested' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="ca-rm-field">
+              <label class="ca-rm-label"><i class="bi bi-chat-left-text-fill me-1 text-primary"></i>Admin Comments & Notes</label>
+              <div class="ca-rm-val-box ca-rm-comment">
+                {{ rejectionModalEvent.rejection_reason?.admin_comment || 'No additional comments provided by the administrator.' }}
+              </div>
+            </div>
+          </div>
+
+          <div class="ca-rm-footer">
+            <button
+              class="btn btn-outline-danger btn-sm px-3"
+              :disabled="isModalActionLoading"
+              @click="handleDeleteRejectedEvent"
+            >
+              <span v-if="isModalActionLoading" class="spinner-border spinner-border-sm me-1"></span>
+              <i v-else class="bi bi-trash3-fill me-1"></i>Delete Event
+            </button>
+            <button
+              class="btn btn-primary-premium btn-sm px-4"
+              :disabled="isModalActionLoading"
+              @click="handleEditRejectedEvent"
+            >
+              <i class="bi bi-pencil-square me-1"></i>Update Event
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
     <div v-if="showCalendarToast" class="ca-toast"><i class="bi bi-info-circle-fill me-2" style="color:#818cf8;"></i>{{ calendarToastMsg }}</div>
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue';
+import { ref, computed, reactive, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { store } from '../store/mockData';
 import Sidebar from './shared/Sidebar.vue';
 import InventoryGrid from './shared/InventoryGrid.vue';
-import SupportDesk from './shared/SupportDesk.vue';
-import CopilotRecommendation from './shared/CopilotRecommendation.vue';
 import CalendarPickerModal from './shared/CalendarPickerModal.vue';
 import CampusBountyAdmin from './CampusBountyAdmin.vue';
 import { useCalendarToast } from '../composables/useCalendarToast';
-import { createEventApi } from '../api/events';
+import { fetchEventsApi, createEventApi, updateEventApi, deleteEventApi } from '../api/events';
+import { fetchEquipmentApi, fetchBorrowDetailsApi, returnBorrowedEquipmentApi } from '../api/inventory';
+import ClubAdminEquipmentScanner from './shared/ClubAdminEquipmentScanner.vue';
+import SupportDeskDiscussionHub from './shared/SupportDeskDiscussionHub.vue';
+
+const liveEvents = ref([]);
+const selectedSupportEventId = ref('');
+
+const liveInventory = ref([]);
+const isInventoryLoading = ref(false);
+const liveBorrowRecords = ref([]);
+const isBorrowRecordsLoading = ref(false);
+const inventorySubTab = ref('catalog');
+
+const loadInventory = async () => {
+  isInventoryLoading.value = true;
+  try {
+    const data = await fetchEquipmentApi();
+    liveInventory.value = data.map((eq) => ({
+      id: eq.id,
+      name: eq.name,
+      category: eq.category,
+      description: eq.description || '',
+      available: eq.available_quantity,
+      borrowed: Math.max(0, eq.total_quantity - eq.available_quantity),
+      total_quantity: eq.total_quantity,
+      available_quantity: eq.available_quantity,
+      storage_location: eq.storage_location,
+      location: eq.storage_location || 'Campus Lab',
+      image: eq.equipment_image_url || 'https://images.unsplash.com/photo-1581092335397-9583eb92d232?w=400&h=300&fit=crop',
+      equipment_image_url: eq.equipment_image_url,
+    }));
+  } catch {
+    liveInventory.value = store.inventory || [];
+  } finally {
+    isInventoryLoading.value = false;
+  }
+};
+
+const addNewInventoryItem = (item) => {
+  liveInventory.value.unshift(item);
+  if (Array.isArray(store.inventory)) {
+    store.inventory.unshift(item);
+  }
+};
+
+const borrowItem = (item) => {
+  // Local optimistic update
+  if (item && item.available > 0) {
+    item.available--;
+    item.borrowed++;
+  }
+};
+
+const addStock = (item, qty) => {
+  if (item) {
+    item.available = (item.available || 0) + qty;
+    item.total_quantity = (item.total_quantity || 0) + qty;
+  }
+};
+
+const loadBorrowRecords = async () => {
+  isBorrowRecordsLoading.value = true;
+  try {
+    const token = store.token || localStorage.getItem('driven_token');
+    const data = await fetchBorrowDetailsApi(token);
+    liveBorrowRecords.value = Array.isArray(data) ? data : [];
+  } catch (err) {
+    liveBorrowRecords.value = [];
+  } finally {
+    isBorrowRecordsLoading.value = false;
+  }
+};
+
+const handleAdminReturn = async (borrowId) => {
+  if (!borrowId) return;
+  try {
+    const token = store.token || localStorage.getItem('driven_token');
+    const res = await returnBorrowedEquipmentApi(borrowId, token);
+    triggerCalendarToast(res.message || 'Equipment returned successfully');
+    loadInventory();
+    loadBorrowRecords();
+  } catch (err) {
+    triggerCalendarToast(err.message || 'Failed to return equipment');
+  }
+};
 
 onMounted(() => {
   store.fetchEvents();
+  loadInventory();
+  loadBorrowRecords();
 });
 
 const router = useRouter();
@@ -722,13 +894,185 @@ const openCalendarForEvent = (event) => {
 };
 
 const currentTab = ref('dashboard');
+const showRejectionModal = ref(false);
+const rejectionModalEvent = ref(null);
+const isModalActionLoading = ref(false);
+const editingEventId = ref(null);
+
+const resetFormEvent = () => {
+  editingEventId.value = null;
+  if (formEvent.cover_image_preview && formEvent.cover_image_preview.startsWith('blob:')) {
+    URL.revokeObjectURL(formEvent.cover_image_preview);
+  }
+  Object.assign(formEvent, {
+    name: '',
+    short_description: '',
+    category: 'workshop',
+    event_date: '',
+    registration_deadline: '',
+    venue: 'seminar_hall',
+    max_participants: 50,
+    description: '',
+    cover_image: null,
+    cover_image_preview: null,
+    cover_image_url: '',
+    agendas: [],
+    additional_info: [],
+    mentors: [],
+  });
+  Object.assign(formErrors, {
+    name: '',
+    short_description: '',
+    event_date: '',
+    registration_deadline: '',
+    description: '',
+  });
+  createStep.value = 1;
+};
+
+const openCreateEventTab = () => {
+  resetFormEvent();
+  currentTab.value = 'create_event';
+};
+
+const handleTabChange = (tab) => {
+  if (tab === 'create_event' && currentTab.value !== 'create_event' && !editingEventId.value) {
+    resetFormEvent();
+  }
+  currentTab.value = tab;
+};
+
+// Whenever navigating away from create_event tab, automatically reset the form
+watch(currentTab, (newTab, oldTab) => {
+  if (oldTab === 'create_event' && newTab !== 'create_event') {
+    resetFormEvent();
+  }
+});
+
+const humanizeRejectionReason = (reason) => {
+  const map = {
+    venue_not_available: 'Venue Not Available',
+    time_slot_conflict: 'Time Slot Conflict',
+    equipment_not_available: 'Equipment Not Available',
+    capacity_exceeded: 'Capacity Exceeded',
+    incomplete_information: 'Incomplete Information',
+    other: 'Other',
+  };
+  return map[reason] || reason || 'Not specified';
+};
+
+const formatVenue = (v) => {
+  if (!v) return 'TBD';
+  const found = venueOptions.find(opt => opt.value === String(v).toLowerCase());
+  if (found) return found.label;
+  return String(v).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
+
+const openRejectionModal = (event) => {
+  rejectionModalEvent.value = event;
+  showRejectionModal.value = true;
+};
+
+const closeRejectionModal = () => {
+  showRejectionModal.value = false;
+  rejectionModalEvent.value = null;
+};
+
+const handleDeleteRejectedEvent = async () => {
+  if (!rejectionModalEvent.value) return;
+  if (!confirm(`Are you sure you want to delete "${rejectionModalEvent.value.name}"?`)) return;
+
+  isModalActionLoading.value = true;
+  try {
+    const token = store.token || localStorage.getItem('driven_token');
+    await deleteEventApi(rejectionModalEvent.value.id, token);
+    await store.fetchEvents();
+    triggerCalendarToast(`Event "${rejectionModalEvent.value.name}" deleted successfully.`);
+    closeRejectionModal();
+  } catch (err) {
+    triggerCalendarToast(err.message || 'Failed to delete event.');
+  } finally {
+    isModalActionLoading.value = false;
+  }
+};
+
+const handleEditRejectedEvent = () => {
+  const ev = rejectionModalEvent.value;
+  if (!ev) return;
+
+  editingEventId.value = ev.id;
+
+  formEvent.name = ev.name || '';
+  formEvent.short_description = ev.short_description || ev.tagline || '';
+  formEvent.category = ev.category || 'workshop';
+  formEvent.event_date = ev.event_date ? (ev.event_date.includes('T') ? ev.event_date.split('T')[0] : ev.event_date) : (ev.date || '');
+
+  if (ev.registration_deadline) {
+    try {
+      const d = new Date(ev.registration_deadline);
+      if (!isNaN(d.getTime())) {
+        const pad = (n) => String(n).padStart(2, '0');
+        formEvent.registration_deadline = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      } else {
+        formEvent.registration_deadline = ev.registration_deadline.slice(0, 16);
+      }
+    } catch {
+      formEvent.registration_deadline = '';
+    }
+  } else {
+    formEvent.registration_deadline = '';
+  }
+
+  formEvent.venue = ev.rejection_reason?.alternative_venue || ev.venue || 'seminar_hall';
+  if (ev.rejection_reason?.alternative_date) {
+    formEvent.event_date = ev.rejection_reason.alternative_date;
+  }
+
+  formEvent.max_participants = ev.max_participants || ev.participants || 50;
+  formEvent.description = ev.description || '';
+  formEvent.cover_image = null;
+  formEvent.cover_image_preview = null;
+  formEvent.cover_image_url = ev.cover_image_url || ev.image || '';
+
+  formEvent.agendas = Array.isArray(ev.agendas) && ev.agendas.length > 0
+    ? JSON.parse(JSON.stringify(ev.agendas)).map(a => ({
+        start_time: a.start_time ? String(a.start_time).slice(0, 5) : '',
+        end_time: a.end_time ? String(a.end_time).slice(0, 5) : '',
+        title: a.title || '',
+        description: a.description || ''
+      }))
+    : [];
+
+  formEvent.additional_info = Array.isArray(ev.additional_info) && ev.additional_info.length > 0
+    ? JSON.parse(JSON.stringify(ev.additional_info)).map(i => ({
+        section_type: i.section_type || 'learning',
+        content: i.content || ''
+      }))
+    : [];
+
+  formEvent.mentors = Array.isArray(ev.mentors) && ev.mentors.length > 0
+    ? JSON.parse(JSON.stringify(ev.mentors)).map(m => ({
+        name: m.name || '',
+        company: m.company || '',
+        designation: m.designation || '',
+        email: m.email || '',
+        linkedin_url: m.linkedin_url || ''
+      }))
+    : [];
+
+  closeRejectionModal();
+  currentTab.value = 'create_event';
+  createStep.value = 1;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
 const currentTabTitle = computed(() => {
   switch (currentTab.value) {
     case 'dashboard': return 'Dashboard';
     case 'events': return 'All Club Events';
-    case 'create_event': return 'Create New Event';
+    case 'create_event': return editingEventId.value ? 'Update Event' : 'Create New Event';
     case 'inventory': return 'Inventory Management';
+    case 'scanner': return 'Equipment Pass Scanner';
     case 'support': return 'Support Desk';
     case 'bounties': return 'Campus Bounties';
     case 'notifications': return 'Notifications';
@@ -751,11 +1095,11 @@ const navItems = computed(() => [
   { label: 'Create Event', icon: 'plus-circle-fill', key: 'create_event' },
   { label: 'Campus Bounties', icon: 'briefcase-fill', key: 'bounties' },
   { label: 'Inventory', icon: 'box-seam-fill', key: 'inventory' },
+  { label: 'QR Scanner', icon: 'qr-code-scan', key: 'scanner' },
   { label: 'Support Desk', icon: 'chat-dots-fill', key: 'support' },
 ]);
 
 const totalInventory = computed(() => store.inventory.reduce((acc, item) => acc + item.available + item.borrowed, 0));
-const openTicketsCount = computed(() => store.tickets.filter(t => t.status === 'Open').length);
 const borrowedItems = computed(() => store.inventory.filter(i => i.borrowed > 0));
 const openEventDetails = (event) => { router.push({ name: 'event-details', params: { eventName: encodeURIComponent(event.name) } }); };
 
@@ -1034,12 +1378,18 @@ const submitNewEvent = async () => {
     }
 
     const token = store.token || localStorage.getItem('driven_token');
-    const createdEvent = await createEventApi(formData, token);
+    if (editingEventId.value) {
+      formData.append('status', 'pending');
+      await updateEventApi(editingEventId.value, formData, token);
+      triggerCalendarToast(`Event "${formEvent.name}" updated and resubmitted for approval!`);
+      editingEventId.value = null;
+    } else {
+      const createdEvent = await createEventApi(formData, token);
+      triggerCalendarToast(`Event "${createdEvent.name}" created and submitted for approval!`);
+    }
 
     // Refresh live events from backend
     await store.fetchEvents();
-
-    triggerCalendarToast(`Event "${createdEvent.name}" created and submitted for approval!`);
 
     // Clean up object URL
     if (formEvent.cover_image_preview && formEvent.cover_image_preview.startsWith('blob:')) {
@@ -1047,43 +1397,50 @@ const submitNewEvent = async () => {
     }
 
     // Reset form to clean state
-    Object.assign(formEvent, {
-      name: '',
-      short_description: '',
-      category: 'workshop',
-      event_date: '',
-      registration_deadline: '',
-      venue: 'seminar_hall',
-      max_participants: 50,
-      description: '',
-      cover_image: null,
-      cover_image_preview: null,
-      cover_image_url: '',
-      agendas: [],
-      additional_info: [],
-      mentors: [],
-    });
-
-    createStep.value = 1;
+    resetFormEvent();
     currentTab.value = 'events';
   } catch (err) {
-    triggerCalendarToast(err.message || 'Failed to create event. Please try again.');
+    triggerCalendarToast(err.message || 'Failed to submit event. Please try again.');
   } finally {
     isSubmitting.value = false;
   }
 };
-const addNewInventoryItem = (item) => {
-  store.inventory.push(item);
-};
-const borrowItem = (item) => store.borrowItem(item.id);
-const addStock = (item, qty = 1) => store.increaseItemQuantity(item.id, qty);
 const returnItem = (item) => store.returnItem(item.id);
-const handleReply = ({ ticket, text, resolve }) => {
-  store.resolveTicket(ticket.id, text);
+
+const loadEvents = async () => {
+  const token = store.token || localStorage.getItem('driven_token');
+  try {
+    const list = await fetchEventsApi(token);
+    if (Array.isArray(list) && list.length > 0) {
+      liveEvents.value = list;
+    }
+  } catch {}
 };
-const handleResolve = (ticket) => {
-  store.resolveTicket(ticket.id, '');
-};
+
+const clubEventsList = computed(() => {
+  return liveEvents.value.length ? liveEvents.value : store.events;
+});
+
+const selectedSupportEvent = computed(() => {
+  if (!clubEventsList.value || clubEventsList.value.length === 0) return null;
+  if (selectedSupportEventId.value) {
+    const found = clubEventsList.value.find(e => String(e.id) === String(selectedSupportEventId.value));
+    if (found) return found;
+  }
+  return clubEventsList.value[0];
+});
+
+watch(clubEventsList, (list) => {
+  if (list && list.length > 0 && !selectedSupportEventId.value) {
+    selectedSupportEventId.value = String(list[0].id);
+  }
+}, { immediate: true });
+
+onMounted(() => {
+  loadEvents();
+  loadInventory();
+  loadBorrowRecords();
+});
 </script>
 
 <style scoped>
@@ -2824,6 +3181,164 @@ const handleResolve = (ticket) => {
   background: rgba(129,140,248,0.15);
   border-color: rgba(129,140,248,0.3);
   transform: translateY(-2px);
+}
+.btn-rejection-detail {
+  padding: 0.28rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid rgba(244,63,94,0.3);
+  background: rgba(244,63,94,0.1);
+  color: #fb7185;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+}
+.btn-rejection-detail:hover {
+  background: rgba(244,63,94,0.22);
+  border-color: rgba(244,63,94,0.5);
+  color: #fda4af;
+  transform: translateY(-1px);
+}
+.btn-rejection-detail-sm {
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(244,63,94,0.3);
+  background: rgba(244,63,94,0.12);
+  color: #fb7185;
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-rejection-detail-sm:hover {
+  background: rgba(244,63,94,0.25);
+  color: #fda4af;
+}
+.event-status.rejected {
+  background: rgba(244,63,94,0.12);
+  color: #fb7185;
+  border: 1px solid rgba(244,63,94,0.25);
+}
+.ca-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(7,11,20,0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.ca-rejection-modal {
+  width: 100%;
+  max-width: 520px;
+  background: rgba(15,23,42,0.96);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: caModalPop 0.25s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes caModalPop {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+.ca-rm-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+.ca-rm-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(244,63,94,0.12);
+  color: #fb7185;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.ca-rm-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0;
+}
+.ca-rm-sub {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  display: block;
+}
+.ca-rm-close {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+.ca-rm-close:hover {
+  background: rgba(255,255,255,0.05);
+  color: #e2e8f0;
+}
+.ca-rm-body {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.ca-rm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.ca-rm-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.ca-rm-val-box {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.82rem;
+  color: #e2e8f0;
+}
+.ca-rm-reason {
+  background: rgba(244,63,94,0.08);
+  border-color: rgba(244,63,94,0.2);
+  color: #fb7185;
+  font-weight: 600;
+}
+.ca-rm-comment {
+  font-style: italic;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+.ca-rm-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0,0,0,0.15);
 }
 .ca-toast {
   position: fixed;

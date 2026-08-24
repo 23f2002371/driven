@@ -22,7 +22,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import String, cast, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
@@ -41,6 +41,7 @@ from app.models.event import (
     EventAgenda,
     EventMentor,
     EventRegistration,
+    EventRejectReason,
     EventWinner,
 )
 from app.models.student import Student
@@ -56,12 +57,21 @@ from app.schemas.event import (
     EventWinnerCreate,
     EventWinnerResponse,
     PrivateEventResponse,
+    RegistrationVerifyRequest,
+    RegistrationVerifyResponse,
     StudentProfile,
 )
 from app.schemas.student import DomainItem, TechnologyItem
+from app.services.qr import (
+    extract_registration_id,
+    extract_registration_identifier,
+    generate_registration_qr_code,
+)
 from app.utils.enums import (
+    AttendanceStatus,
     CertificateType,
     Department,
+    EventRejectionReason,
     EventStatus,
     UserRole,
     WinnerPosition,
@@ -77,6 +87,11 @@ CurrentUser = Annotated[
 ClubAdmin = Annotated[
     User,
     Depends(require_roles(UserRole.CLUB_ADMIN))
+]
+
+ClubOrLabAdmin = Annotated[
+    User,
+    Depends(require_roles(UserRole.CLUB_ADMIN, UserRole.LAB_ADMIN))
 ]
 
 StudentOnly = Annotated[
@@ -392,11 +407,11 @@ async def create_event(
 
 
 @router.patch("/events/{event_id}", response_model=PrivateEventResponse)
-def update_event(
+async def update_event(
     event_id: uuid.UUID,
-    payload: EventUpdate,
+    request: Request,
     db: DbSession,
-    current_user: ClubAdmin,
+    current_user: ClubOrLabAdmin,
 ) -> Event:
     """Update an event, replacing any supplied child collections wholesale."""
     event = db.scalar(
@@ -406,6 +421,7 @@ def update_event(
             selectinload(Event.agendas),
             selectinload(Event.additional_info),
             selectinload(Event.mentors),
+            selectinload(Event.rejection_reason),
         )
     )
     if event is None:
@@ -414,10 +430,113 @@ def update_event(
             detail="Event not found",
         )
 
+    content_type = request.headers.get("content-type", "")
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        name = form.get("name")
+        short_description = form.get("short_description")
+        category = form.get("category")
+        event_date = form.get("event_date")
+        registration_deadline = form.get("registration_deadline")
+        venue = form.get("venue")
+        max_participants = form.get("max_participants")
+        description = form.get("description")
+        cover_image_url = form.get("cover_image_url")
+        status_val = form.get("status")
+
+        # Parse child collections
+        agendas_raw = form.get("agendas")
+        try:
+            agendas = json.loads(agendas_raw) if agendas_raw else None
+        except Exception:
+            agendas = None
+
+        additional_info_raw = form.get("additional_info")
+        try:
+            additional_info = json.loads(additional_info_raw) if additional_info_raw else None
+        except Exception:
+            additional_info = None
+
+        mentors_raw = form.get("mentors")
+        try:
+            mentors = json.loads(mentors_raw) if mentors_raw else None
+        except Exception:
+            mentors = None
+
+        # Handle image file upload to Cloudinary
+        cover_image_file = form.get("cover_image")
+        if cover_image_file and hasattr(cover_image_file, "file") and getattr(cover_image_file, "filename", None):
+            if settings.CLOUDINARY_CLOUD_NAME and settings.CLOUDINARY_API_KEY and settings.CLOUDINARY_API_SECRET:
+                try:
+                    import cloudinary
+                    import cloudinary.uploader
+
+                    cloudinary.config(
+                        cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+                        api_key=settings.CLOUDINARY_API_KEY,
+                        api_secret=settings.CLOUDINARY_API_SECRET,
+                    )
+                    file_bytes = await cover_image_file.read()
+                    if file_bytes:
+                        upload_result = cloudinary.uploader.upload(
+                            file_bytes,
+                            folder="club-management/events",
+                            resource_type="image",
+                        )
+                        cover_image_url = upload_result.get("secure_url")
+                except Exception:
+                    pass
+
+        payload_dict = {}
+        if name is not None:
+            payload_dict["name"] = name
+        if short_description is not None:
+            payload_dict["short_description"] = short_description
+        if category is not None:
+            payload_dict["category"] = category
+        if event_date is not None:
+            payload_dict["event_date"] = event_date
+        if registration_deadline is not None:
+            payload_dict["registration_deadline"] = registration_deadline
+        if venue is not None:
+            payload_dict["venue"] = venue
+        if max_participants is not None:
+            payload_dict["max_participants"] = int(max_participants)
+        if description is not None:
+            payload_dict["description"] = description
+        if cover_image_url is not None:
+            payload_dict["cover_image_url"] = cover_image_url
+        if status_val is not None:
+            payload_dict["status"] = status_val
+        if agendas is not None:
+            payload_dict["agendas"] = agendas
+        if additional_info is not None:
+            payload_dict["additional_info"] = additional_info
+        if mentors is not None:
+            payload_dict["mentors"] = mentors
+
+        try:
+            payload = EventUpdate.model_validate(payload_dict)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            ) from exc
+    else:
+        try:
+            body = await request.json()
+            payload = EventUpdate.model_validate(body)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            ) from exc
+
     update_data = payload.model_dump(exclude_unset=True)
     agendas = update_data.pop("agendas", None)
     additional_info = update_data.pop("additional_info", None)
     mentors = update_data.pop("mentors", None)
+    rejection_reason = update_data.pop("rejection_reason", None)
 
     for field, value in update_data.items():
         setattr(event, field, value)
@@ -431,6 +550,20 @@ def update_event(
             ]
         if mentors is not None:
             event.mentors = [EventMentor(**mentor.model_dump()) for mentor in mentors]
+        if rejection_reason is not None:
+            event.status = EventStatus.REJECTED
+            if event.rejection_reason is None:
+                event.rejection_reason = EventRejectReason(
+                    event_id=event.id,
+                    **rejection_reason,
+                )
+            else:
+                for k, v in rejection_reason.items():
+                    setattr(event.rejection_reason, k, v)
+        elif event.status == EventStatus.PENDING and event.rejection_reason is not None:
+            # Resubmitted event clears previous rejection reason
+            db.delete(event.rejection_reason)
+            event.rejection_reason = None
 
         db.commit()
     except Exception as exc:
@@ -443,6 +576,30 @@ def update_event(
     return event
 
 
+@router.delete("/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_event(
+    event_id: uuid.UUID,
+    db: DbSession,
+    current_user: ClubOrLabAdmin,
+) -> None:
+    """Delete an event and all its cascaded associations."""
+    event = db.scalar(select(Event).where(Event.id == event_id))
+    if event is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        )
+    db.delete(event)
+    try:
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete event",
+        ) from exc
+
+
 @router.get("/events/private", response_model=list[PrivateEventResponse])
 def list_private_events(db: DbSession, current_user: CurrentUser) -> list[Event]:
     """Fetch all events with their child collections for authenticated users."""
@@ -452,6 +609,7 @@ def list_private_events(db: DbSession, current_user: CurrentUser) -> list[Event]
             selectinload(Event.agendas),
             selectinload(Event.additional_info),
             selectinload(Event.mentors),
+            selectinload(Event.rejection_reason),
         )
         .order_by(Event.event_date.asc())
     )
@@ -498,6 +656,7 @@ def get_private_event(event_id: uuid.UUID, db: DbSession, current_user: CurrentU
             selectinload(Event.agendas),
             selectinload(Event.additional_info),
             selectinload(Event.mentors),
+            selectinload(Event.rejection_reason),
         )
     )
     if event is None:
@@ -567,10 +726,20 @@ def create_event_registration(
             detail="Already registered for this event",
         )
 
+    registration_id = uuid.uuid4()
+    qr_code_url = generate_registration_qr_code(
+        registration_id=registration_id,
+        event_id=payload.event_id,
+        student_id=student.id,
+        api_prefix=settings.API_STR,
+    )
+
     registration = EventRegistration(
+        id=registration_id,
         event_id=payload.event_id,
         student_id=student.id,
         team_name=payload.team_name,
+        qr_code_url=qr_code_url,
     )
     db.add(registration)
     try:
@@ -583,6 +752,187 @@ def create_event_registration(
         ) from exc
     db.refresh(registration)
     return _registration_response(registration)
+
+
+@router.get(
+    "/events/registrations/me",
+    response_model=list[EventRegistrationResponse],
+)
+def get_my_event_registrations(
+    db: DbSession,
+    current_user: StudentOnly,
+) -> list[EventRegistrationResponse]:
+    """Fetch all event registrations and passes belonging to the authenticated student."""
+    student = _get_current_student(db, current_user)
+
+    stmt = (
+        select(EventRegistration)
+        .where(EventRegistration.student_id == student.id)
+        .options(*_registration_eager_loads())
+        .order_by(EventRegistration.id.desc())
+    )
+    registrations = db.scalars(stmt).all()
+    return [_registration_response(r) for r in registrations]
+
+
+@router.post(
+    "/events/registrations/verify",
+    response_model=RegistrationVerifyResponse,
+)
+def verify_event_registration_pass(
+    payload: RegistrationVerifyRequest,
+    db: DbSession,
+    current_user: ClubOrLabAdmin,
+) -> RegistrationVerifyResponse:
+    """Verify an event pass via scanned QR code data or registration ID and mark attendance.
+    
+    Accessible by Lab Administrators and Club Administrators.
+    """
+    target_uuid, short_prefix = extract_registration_identifier(
+        payload.qr_data or (str(payload.registration_id) if payload.registration_id else "")
+    )
+
+    registration = None
+    if target_uuid is not None:
+        registration = db.scalar(
+            select(EventRegistration)
+            .where(EventRegistration.id == target_uuid)
+            .options(*_registration_eager_loads())
+        )
+        if registration is None:
+            registration = db.scalar(
+                select(EventRegistration)
+                .where(EventRegistration.event_id == target_uuid)
+                .options(*_registration_eager_loads())
+                .order_by(EventRegistration.id.desc())
+            )
+    elif short_prefix:
+        registration = db.scalar(
+            select(EventRegistration)
+            .where(cast(EventRegistration.id, String).ilike(f"{short_prefix}%"))
+            .options(*_registration_eager_loads())
+        )
+        if registration is None:
+            registration = db.scalar(
+                select(EventRegistration)
+                .where(cast(EventRegistration.event_id, String).ilike(f"{short_prefix}%"))
+                .options(*_registration_eager_loads())
+                .order_by(EventRegistration.id.desc())
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid QR code data or registration ID format",
+        )
+
+    already_marked = registration.attendance_status == AttendanceStatus.PRESENT
+    event_date = registration.event.event_date
+    today_utc = datetime.now(UTC).date()
+    today_local = datetime.now().date()
+
+    # Strict Event Date Verification: Scanning is only open on event day
+    if event_date > today_local and event_date > today_utc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Scanning is not open yet. Event '{registration.event.name}' is scheduled for {event_date.strftime('%d %b %Y')}.",
+        )
+    if event_date < today_local and event_date < today_utc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Event '{registration.event.name}' has already concluded (Date: {event_date.strftime('%d %b %Y')}).",
+        )
+
+    if not already_marked:
+        registration.attendance_status = AttendanceStatus.PRESENT
+        try:
+            db.commit()
+        except Exception as exc:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update attendance status",
+            ) from exc
+        db.refresh(registration)
+        msg = f"Attendance marked as Present for {registration.student.user.full_name}."
+    else:
+        msg = f"Student {registration.student.user.full_name} is already marked Present."
+
+    return RegistrationVerifyResponse(
+        success=True,
+        message=msg,
+        already_marked=already_marked,
+        scanned_at=datetime.now(UTC),
+        registration=_registration_response(registration),
+    )
+
+
+@router.post(
+    "/events/registrations/{registration_id}/verify",
+    response_model=RegistrationVerifyResponse,
+)
+def verify_event_registration_by_id(
+    registration_id: uuid.UUID,
+    db: DbSession,
+    current_user: ClubOrLabAdmin,
+) -> RegistrationVerifyResponse:
+    """Verify an event pass by registration ID and mark attendance as Present."""
+    registration = db.scalar(
+        select(EventRegistration)
+        .where(EventRegistration.id == registration_id)
+        .options(*_registration_eager_loads())
+    )
+    if registration is None:
+        registration = db.scalar(
+            select(EventRegistration)
+            .where(EventRegistration.event_id == registration_id)
+            .options(*_registration_eager_loads())
+            .order_by(EventRegistration.id.desc())
+        )
+    if registration is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event registration pass not found",
+        )
+
+    already_marked = registration.attendance_status == AttendanceStatus.PRESENT
+    event_date = registration.event.event_date
+    today_utc = datetime.now(UTC).date()
+    today_local = datetime.now().date()
+
+    # Strict Event Date Verification: Scanning is only open on event day
+    if event_date > today_local and event_date > today_utc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Scanning is not open yet. Event '{registration.event.name}' is scheduled for {event_date.strftime('%d %b %Y')}.",
+        )
+    if event_date < today_local and event_date < today_utc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Event '{registration.event.name}' has already concluded (Date: {event_date.strftime('%d %b %Y')}).",
+        )
+
+    if not already_marked:
+        registration.attendance_status = AttendanceStatus.PRESENT
+        try:
+            db.commit()
+        except Exception as exc:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update attendance status",
+            ) from exc
+        db.refresh(registration)
+        msg = f"Attendance marked as Present for {registration.student.user.full_name}."
+    else:
+        msg = f"Student {registration.student.user.full_name} is already marked Present."
+
+    return RegistrationVerifyResponse(
+        success=True,
+        message=msg,
+        already_marked=already_marked,
+        scanned_at=datetime.now(UTC),
+        registration=_registration_response(registration),
+    )
 
 
 @router.patch(

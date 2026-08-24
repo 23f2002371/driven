@@ -24,39 +24,139 @@
 
     <div class="inv-toolbar">
       <div class="inv-toolbar-left">
-        <div class="inv-search-wrap">
-          <i class="bi bi-search inv-search-icon"></i>
-          <input v-model="searchQuery" type="text" class="inv-search-input" placeholder="Search equipment..." />
-          <button v-if="searchQuery" class="inv-search-clear" @click="searchQuery = ''"><i class="bi bi-x-lg"></i></button>
+        <!-- Category Select Dropdown -->
+        <div class="inv-select-wrap">
+          <i class="bi bi-tag inv-select-icon"></i>
+          <select v-model="categoryFilter" class="inv-select" @change="activeTab = 'catalog'">
+            <option value="">All Categories</option>
+            <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+          </select>
         </div>
-        <div class="inv-filter-group">
-          <div class="inv-select-wrap">
-            <i class="bi bi-tag inv-select-icon"></i>
-            <select v-model="categoryFilter" class="inv-select">
-              <option value="">All Categories</option>
-              <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
-            </select>
-          </div>
-          <button v-if="isAdmin" class="inv-btn-add" @click="showAddModal = true">
-            <i class="bi bi-plus-lg"></i>
-            <span>Add Inventory</span>
-          </button>
-        </div>
+
+        <!-- Add Inventory Button (Admin Only) -->
+        <button v-if="isAdmin" class="inv-btn-add" @click="showAddModal = true">
+          <i class="bi bi-plus-lg"></i>
+          <span>Add Inventory</span>
+        </button>
       </div>
-      <div class="inv-toolbar-right">
-        <span class="inv-result-count">{{ filteredItems.length }} items</span>
-        <div class="inv-view-toggle">
-          <button class="inv-view-btn" :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'" title="Grid view">
-            <i class="bi bi-grid-3x3-gap-fill"></i>
-          </button>
-          <button class="inv-view-btn" :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'" title="List view">
-            <i class="bi bi-list-ul"></i>
-          </button>
-        </div>
+
+      <div class="inv-toolbar-right" v-if="isAdmin">
+        <!-- Equipment Catalog Button (Admin Only) -->
+        <button
+          class="inv-btn-catalog"
+          :class="{ active: activeTab === 'catalog' }"
+          @click="activeTab = 'catalog'"
+        >
+          <i class="bi bi-grid-3x3-gap-fill me-1"></i>
+          <span>Equipment Catalog</span>
+        </button>
+
+        <!-- Borrowed List Button (Admin Only) -->
+        <button
+          class="inv-btn-borrowed"
+          :class="{ active: activeTab === 'borrowed' }"
+          @click="activeTab = 'borrowed'"
+        >
+          <i class="bi bi-person-lines-fill me-1"></i>
+          <span>Borrowed List</span>
+          <span v-if="borrowRecords.length > 0" class="inv-badge-count">{{ borrowRecords.length }}</span>
+        </button>
       </div>
     </div>
 
-    <div v-if="loading" class="inv-grid" :class="viewMode">
+    <!-- 1. Borrowed Records View (Admin Only) -->
+    <div v-if="activeTab === 'borrowed'" class="inv-borrowed-container">
+      <div class="inv-borrowed-header">
+        <div class="d-flex align-items-center gap-2">
+          <h4 class="inv-borrowed-title"><i class="bi bi-journal-text me-2 text-primary"></i>Active Borrowed Records</h4>
+          <span class="inv-badge-count ms-2">{{ borrowRecords.length }} Active</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button class="inv-btn-refresh" @click="activeTab = 'catalog'">
+            <i class="bi bi-grid-3x3-gap-fill me-1"></i>Back to Catalog
+          </button>
+          <button class="inv-btn-refresh" @click="$emit('refresh-borrows')" :disabled="isBorrowLoading">
+            <i class="bi bi-arrow-clockwise me-1" :class="{ 'spin-anim': isBorrowLoading }"></i>Refresh
+          </button>
+        </div>
+      </div>
+
+      <div v-if="isBorrowLoading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="text-secondary mt-2">Loading active borrow records...</p>
+      </div>
+
+      <div v-else-if="borrowRecords.length === 0" class="inv-borrowed-empty text-center py-5">
+        <i class="bi bi-inbox fs-1 mb-2 d-block text-secondary"></i>
+        <h5 class="text-white">No Active Borrowed Equipment</h5>
+        <p class="text-secondary small">When students borrow equipment with QR passes, they will appear here.</p>
+      </div>
+
+      <div v-else class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0 inv-borrowed-table">
+          <thead>
+            <tr>
+              <th>Equipment</th>
+              <th>Borrower Student</th>
+              <th>Qty</th>
+              <th>Requested Date</th>
+              <th>Return Deadline</th>
+              <th>Pass ID</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="rec in borrowRecords" :key="rec.id">
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <img
+                    :src="rec.equipment_image_url || 'https://images.unsplash.com/photo-1581092335397-9583eb92d232?w=100&h=100&fit=crop'"
+                    alt="thumb"
+                    class="inv-table-thumb"
+                  />
+                  <div>
+                    <strong class="text-white d-block">{{ rec.equipment_name }}</strong>
+                    <span class="badge bg-secondary" style="font-size: 0.68rem;">{{ rec.equipment_category || 'Hardware' }}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="text-white fw-semibold">{{ rec.student_name }}</div>
+                <div class="small text-muted">{{ rec.student_email }}</div>
+                <div v-if="rec.student_roll_number" class="small text-info font-monospace">{{ rec.student_roll_number }}</div>
+              </td>
+              <td>
+                <span class="badge bg-primary px-2 py-1">{{ rec.borrowed_quantity }} Unit(s)</span>
+              </td>
+              <td class="text-muted small">
+                {{ new Date(rec.requested_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+              </td>
+              <td>
+                <span class="badge bg-warning text-dark px-2 py-1">
+                  {{ new Date(rec.return_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }}
+                </span>
+              </td>
+              <td>
+                <span class="font-monospace text-info small">BORROW-{{ String(rec.id).replace(/-/g, '').slice(0, 8).toUpperCase() }}</span>
+              </td>
+              <td class="text-end">
+                <button
+                  class="btn btn-sm btn-outline-warning"
+                  @click="$emit('admin-return', rec.id)"
+                  title="Mark equipment as returned and restore stock"
+                >
+                  <i class="bi bi-arrow-return-left me-1"></i>Return & Restock
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 2. Equipment Catalog View -->
+    <template v-else>
+      <div v-if="loading" class="inv-grid grid">
       <div v-for="n in 6" :key="n" class="inv-card inv-skeleton">
         <div class="inv-card-image skeleton-pulse"></div>
         <div class="inv-card-body">
@@ -95,7 +195,6 @@
         </div>
         <div class="inv-card-body">
           <h3 class="inv-card-title">{{ item.name }}</h3>
-          <p class="inv-card-desc">{{ item.description }}</p>
           <div class="inv-card-metrics">
             <div class="inv-metric">
               <span class="inv-metric-value">{{ item.available }}</span>
@@ -119,22 +218,17 @@
               <span class="inv-btn-borrow-text">Add Stock</span>
               <i class="bi bi-plus-lg inv-btn-borrow-icon"></i>
             </button>
-            <button
-              v-else
-              class="inv-btn-borrow"
-              :disabled="item.available === 0"
-              @click="openPanel(item, 'borrow')"
-            >
-              <span class="inv-btn-borrow-text">{{ item.available === 0 ? 'Unavailable' : 'Borrow' }}</span>
-              <i class="bi bi-arrow-right inv-btn-borrow-icon"></i>
-              <span v-if="item.available > 0" class="inv-btn-borrow-glow"></span>
-            </button>
-            <button v-if="isAdmin" class="inv-btn-details" @click="openPanel(item, 'details')">
-              Quick Details
-            </button>
-            <button v-else class="inv-btn-return" @click="openPanel(item, 'return')">
-              <i class="bi bi-arrow-return-left me-1"></i>Return
-            </button>
+            <template v-else>
+              <button
+                class="inv-btn-borrow"
+                :disabled="item.available === 0"
+                @click="openPanel(item, 'borrow')"
+              >
+                <span class="inv-btn-borrow-text">{{ item.available === 0 ? 'Unavailable' : 'Borrow' }}</span>
+                <i class="bi bi-arrow-right inv-btn-borrow-icon"></i>
+                <span v-if="item.available > 0" class="inv-btn-borrow-glow"></span>
+              </button>
+            </template>
           </div>
         </div>
       </div>
@@ -159,6 +253,7 @@
         <i class="bi bi-arrow-counterclockwise me-2"></i>Reset Filters
       </button>
     </div>
+    </template>
 
     <Transition name="panel">
       <div v-if="panelItem" class="inv-panel-overlay" @click.self="closePanel">
@@ -201,14 +296,39 @@
                     <span v-if="panelItem.borrowers && panelItem.borrowers.length" class="inv-spec-value inv-spec-clickable" @click="scrollToBorrowers">{{ panelItem.borrowed }} units <i class="bi bi-chevron-down ms-1" style="font-size:0.6rem;"></i></span>
                     <span v-else class="inv-spec-value">{{ panelItem.borrowed }} units</span>
                   </div>
+                  <div class="inv-panel-spec" v-if="!isAdmin">
+                    <span class="inv-spec-label">Borrowed by You</span>
+                    <span class="inv-spec-value" :class="myBorrowedQuantityForPanel > 0 ? 'text-info fw-bold' : ''">
+                      {{ myBorrowedQuantityForPanel }} unit{{ myBorrowedQuantityForPanel !== 1 ? 's' : '' }}
+                    </span>
+                  </div>
                   <div class="inv-panel-spec">
                     <span class="inv-spec-label">Condition</span>
                     <span class="inv-spec-value"><span class="inv-cond-badge">Good</span></span>
                   </div>
                   <div class="inv-panel-spec">
                     <span class="inv-spec-label">Return Deadline</span>
-                    <span class="inv-spec-value inv-deadline-value">{{ panelItem.returnDeadline || 'N/A' }}</span>
+                    <span class="inv-spec-value inv-deadline-value" :class="myBorrowedQuantityForPanel > 0 ? 'text-warning fw-bold' : ''">
+                      {{ panelItemReturnDeadline }}
+                    </span>
                   </div>
+                </div>
+              </div>
+
+              <!-- Active Borrow Pass Banner if borrowed -->
+              <div v-if="!isAdmin && myBorrowedQuantityForPanel > 0" class="inv-panel-section inv-borrow-pass-banner">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <div>
+                    <div class="inv-pass-banner-title">
+                      <i class="bi bi-ticket-perforated-fill text-info me-2"></i>Active Borrow Pass
+                    </div>
+                    <div class="inv-pass-banner-sub">
+                      {{ myBorrowedQuantityForPanel }} unit(s) &middot; Due {{ panelItemReturnDeadline }}
+                    </div>
+                  </div>
+                  <button class="inv-btn-view-pass" @click="openExistingBorrowPass(panelItem)">
+                    <i class="bi bi-qr-code-scan me-1"></i>View Pass
+                  </button>
                 </div>
               </div>
 
@@ -249,12 +369,13 @@
               <button
                 v-else-if="panelAction === 'borrow'"
                 class="inv-panel-borrow-btn"
-                :disabled="panelItem.available === 0"
+                :disabled="panelItem.available === 0 || isBorrowing"
                 @click="confirmPanelAction"
               >
-                <i class="bi bi-box-seam-fill me-2"></i>
-                {{ panelItem.available === 0 ? 'Unavailable' : `Borrow ${panelQuantity} Unit${panelQuantity > 1 ? 's' : ''}` }}
-                <i class="bi bi-arrow-right ms-2"></i>
+                <span v-if="isBorrowing" class="spinner-border spinner-border-sm me-2"></span>
+                <i v-else class="bi bi-box-seam-fill me-2"></i>
+                {{ isBorrowing ? 'Generating Pass...' : (panelItem.available === 0 ? 'Unavailable' : `Borrow ${panelQuantity} Unit${panelQuantity > 1 ? 's' : ''}`) }}
+                <i v-if="!isBorrowing" class="bi bi-arrow-right ms-2"></i>
               </button>
               <button
                 v-else-if="isAdmin"
@@ -308,120 +429,95 @@
 
           <div class="inv-modal-body">
             <div class="inv-modal-form">
+              <div v-if="apiError" class="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center gap-2" role="alert" style="font-size: 0.85rem; border-radius: 10px;">
+                <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                <div>{{ apiError }}</div>
+              </div>
+
               <div class="inv-form-section" data-idx="0">
                 <h4 class="inv-form-section-title">Basic Information</h4>
                 <div class="inv-form-row">
                   <div class="inv-form-group" :class="{ 'has-error': formErrors.name && formTouched.name }">
                     <label class="inv-form-label">Equipment Name <span class="required">*</span></label>
-                    <input v-model="addForm.name" type="text" class="inv-form-input" placeholder="e.g. Arduino Uno R3" @blur="touchField('name')" />
+                    <input v-model="addForm.name" type="text" maxlength="150" class="inv-form-input" placeholder="e.g. Arduino Uno R3" @blur="touchField('name')" />
                     <span v-if="formErrors.name && formTouched.name" class="inv-form-error">{{ formErrors.name }}</span>
                   </div>
                   <div class="inv-form-group" :class="{ 'has-error': formErrors.category && formTouched.category }">
                     <label class="inv-form-label">Category <span class="required">*</span></label>
-                    <div class="inv-form-combo-wrap">
-                      <input v-model="addForm.category" type="text" class="inv-form-input" list="cat-list" placeholder="Select or type..." @blur="touchField('category')" />
-                      <i class="bi bi-chevron-down inv-form-combo-arrow"></i>
-                    </div>
-                    <datalist id="cat-list">
-                      <option v-for="cat in existingCategories" :key="cat" :value="cat" />
-                    </datalist>
+                    <select v-model="addForm.category" class="inv-form-input" @blur="touchField('category')">
+                      <option value="" disabled>Select Category</option>
+                      <option value="electronics">Electronics</option>
+                      <option value="microcontroller">Microcontrollers & Dev Boards</option>
+                      <option value="sensor_module">Sensors & Modules</option>
+                      <option value="robotics">Robotics & Motors</option>
+                      <option value="audio_visual">Audio / Visual</option>
+                      <option value="computing_hardware">Computing & Hardware</option>
+                      <option value="networking">Networking & IoT</option>
+                      <option value="tools_and_hardware">Tools & Hardware</option>
+                      <option value="other">Other</option>
+                    </select>
                     <span v-if="formErrors.category && formTouched.category" class="inv-form-error">{{ formErrors.category }}</span>
                   </div>
                 </div>
-                <div class="inv-form-group" :class="{ 'has-error': formErrors.description && formTouched.description }">
-                  <label class="inv-form-label">Description <span class="required">*</span></label>
-                  <textarea v-model="addForm.description" class="inv-form-textarea" rows="3" placeholder="Describe the equipment and its typical use cases..." @blur="touchField('description')"></textarea>
-                  <span v-if="formErrors.description && formTouched.description" class="inv-form-error">{{ formErrors.description }}</span>
+                <div class="inv-form-group">
+                  <label class="inv-form-label">Description</label>
+                  <textarea v-model="addForm.description" class="inv-form-textarea" rows="3" placeholder="Describe the equipment, components, or use case..."></textarea>
                 </div>
               </div>
 
               <div class="inv-form-section" data-idx="1">
-                <h4 class="inv-form-section-title">Inventory Details</h4>
-                <div class="inv-form-row three">
+                <h4 class="inv-form-section-title">Stock & Inventory</h4>
+                <div class="inv-form-row">
                   <div class="inv-form-group">
-                    <label class="inv-form-label">Total Quantity</label>
+                    <label class="inv-form-label">Total Quantity <span class="required">*</span></label>
                     <div class="inv-stepper">
-                      <button class="inv-step-btn" @click="addForm.totalQuantity > 1 && addForm.totalQuantity--" :disabled="addForm.totalQuantity <= 1"><i class="bi bi-dash"></i></button>
+                      <button class="inv-step-btn" @click="handleTotalQuantityChange(addForm.totalQuantity - 1)" :disabled="addForm.totalQuantity <= 1"><i class="bi bi-dash"></i></button>
                       <span class="inv-step-value">{{ addForm.totalQuantity }}</span>
-                      <button class="inv-step-btn" @click="addForm.totalQuantity++"><i class="bi bi-plus"></i></button>
+                      <button class="inv-step-btn" @click="handleTotalQuantityChange(addForm.totalQuantity + 1)"><i class="bi bi-plus"></i></button>
                     </div>
                   </div>
                   <div class="inv-form-group">
-                    <label class="inv-form-label">Available Quantity</label>
+                    <label class="inv-form-label">Available Quantity <span class="required">*</span></label>
                     <div class="inv-stepper">
                       <button class="inv-step-btn" @click="addForm.availableQuantity > 0 && addForm.availableQuantity--" :disabled="addForm.availableQuantity <= 0"><i class="bi bi-dash"></i></button>
                       <span class="inv-step-value">{{ addForm.availableQuantity }}</span>
                       <button class="inv-step-btn" @click="addForm.availableQuantity < addForm.totalQuantity && addForm.availableQuantity++" :disabled="addForm.availableQuantity >= addForm.totalQuantity"><i class="bi bi-plus"></i></button>
                     </div>
                   </div>
-                  <div class="inv-form-group">
-                    <label class="inv-form-label">Condition</label>
-                    <select v-model="addForm.condition" class="inv-form-input">
-                      <option value="Excellent">Excellent</option>
-                      <option value="Good">Good</option>
-                      <option value="Maintenance">Maintenance</option>
-                      <option value="Damaged">Damaged</option>
-                    </select>
-                  </div>
                 </div>
               </div>
 
               <div class="inv-form-section" data-idx="2">
                 <h4 class="inv-form-section-title">Location</h4>
-                <div class="inv-form-row">
-                  <div class="inv-form-group" :class="{ 'has-error': formErrors.storageLocation && formTouched.storageLocation }">
-                    <label class="inv-form-label">Storage Location <span class="required">*</span></label>
-                    <input v-model="addForm.storageLocation" type="text" class="inv-form-input" placeholder="e.g. Lab A, Shelf 3" @blur="touchField('storageLocation')" />
-                    <span v-if="formErrors.storageLocation && formTouched.storageLocation" class="inv-form-error">{{ formErrors.storageLocation }}</span>
-                  </div>
-                  <div class="inv-form-group">
-                    <label class="inv-form-label">Shelf / Room Number</label>
-                    <input v-model="addForm.shelfNumber" type="text" class="inv-form-input" placeholder="Optional" />
-                  </div>
+                <div class="inv-form-group">
+                  <label class="inv-form-label">Storage Location</label>
+                  <input v-model="addForm.storageLocation" type="text" maxlength="150" class="inv-form-input" placeholder="e.g. Robotics Lab, Cabinet 3 / Shelf A" />
                 </div>
               </div>
 
               <div class="inv-form-section" data-idx="3">
-                <h4 class="inv-form-section-title">Media</h4>
+                <h4 class="inv-form-section-title">Equipment Image</h4>
                 <div class="inv-form-group">
-                  <label class="inv-form-label">Equipment Image</label>
+                  <label class="inv-form-label">Upload Photo (Cloudinary)</label>
                   <div class="inv-upload-zone" @click="fileInputRef?.click()" @dragover.prevent @drop.prevent="handleFileDrop" :class="{ 'has-image': imagePreview }">
-                    <input ref="fileInputRef" type="file" accept="image/jpeg,image/png,image/webp" hidden @change="handleFileUpload" />
+                    <input ref="fileInputRef" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden @change="handleFileUpload" />
                     <template v-if="!imagePreview">
                       <div class="inv-upload-icon"><i class="bi bi-cloud-arrow-up"></i></div>
                       <p class="inv-upload-text">Drag & drop image or <span>Browse files</span></p>
-                      <p class="inv-upload-hint">PNG, JPG, WebP &middot; Max 5MB</p>
+                      <p class="inv-upload-hint">PNG, JPG, WebP &middot; Uploaded directly to Cloudinary</p>
                     </template>
                     <template v-else>
-                      <img :src="imagePreview" alt="Preview" class="inv-upload-preview" />
-                      <button class="inv-upload-remove" @click.stop="removeImage"><i class="bi bi-x-lg"></i></button>
+                      <img :src="imagePreview" alt="Equipment Preview" class="inv-upload-preview" />
+                      <button class="inv-upload-remove" @click.stop="removeImage" title="Remove image"><i class="bi bi-x-lg"></i></button>
                     </template>
                   </div>
-                </div>
-              </div>
-
-              <div class="inv-form-section" data-idx="4">
-                <h4 class="inv-form-section-title">Additional Details</h4>
-                <div class="inv-form-row">
-                  <div class="inv-form-group">
-                    <label class="inv-form-label">Serial Number</label>
-                    <input v-model="addForm.serialNumber" type="text" class="inv-form-input" placeholder="Optional" />
-                  </div>
-                  <div class="inv-form-group">
-                    <label class="inv-form-label">Purchase Date</label>
-                    <input v-model="addForm.purchaseDate" type="text" class="inv-form-input" placeholder="e.g. Jan 15, 2026" />
-                  </div>
-                </div>
-                <div class="inv-form-group">
-                  <label class="inv-form-label">Notes</label>
-                  <textarea v-model="addForm.notes" class="inv-form-textarea" rows="2" placeholder="Any additional information..."></textarea>
                 </div>
               </div>
             </div>
 
             <div class="inv-modal-preview">
               <div class="inv-preview-sticky">
-                <h4 class="inv-form-section-title" style="margin-bottom: 1rem;">Preview</h4>
+                <h4 class="inv-form-section-title" style="margin-bottom: 1rem;">Live Preview</h4>
                 <div class="inv-preview-card">
                   <div class="inv-preview-card-image">
                     <img :src="formPreviewItem.image" :alt="formPreviewItem.name" />
@@ -447,22 +543,18 @@
                         <span class="inv-metric-label">Total</span>
                       </div>
                       <div class="inv-metric">
-                        <span class="inv-metric-value">0</span>
+                        <span class="inv-metric-value">{{ addForm.totalQuantity - addForm.availableQuantity }}</span>
                         <span class="inv-metric-label">Borrowed</span>
                       </div>
                     </div>
-                    <div class="inv-preview-status-row">
-                      <span class="inv-preview-condition">
-                        <span class="inv-legend-dot" :class="conditionDotClass"></span>
-                        {{ addForm.condition }}
-                      </span>
-                      <span v-if="addForm.storageLocation" class="inv-preview-location">
-                        <i class="bi bi-geo-alt-fill me-1"></i>{{ addForm.storageLocation }}{{ addForm.shelfNumber ? ' - ' + addForm.shelfNumber : '' }}
+                    <div class="inv-preview-status-row" v-if="addForm.storageLocation">
+                      <span class="inv-preview-location">
+                        <i class="bi bi-geo-alt-fill me-1"></i>{{ addForm.storageLocation }}
                       </span>
                     </div>
                   </div>
                 </div>
-                <p class="inv-preview-hint">This preview reflects the live equipment card as it will appear in the inventory grid.</p>
+                <p class="inv-preview-hint">This preview shows the live equipment card as it will appear in the inventory catalog.</p>
               </div>
             </div>
           </div>
@@ -472,10 +564,10 @@
               <span class="inv-footer-required"><span class="required">*</span> Required fields</span>
             </div>
             <div class="inv-modal-footer-right">
-              <button class="inv-btn-secondary" @click="closeAddModal">Cancel</button>
-              <button class="inv-btn-secondary" @click="submitAddItem">Save as Draft</button>
+              <button class="inv-btn-secondary" @click="closeAddModal" :disabled="isSubmitting">Cancel</button>
               <button class="inv-btn-primary" :disabled="!isFormValid || isSubmitting" @click="submitAddItem">
-                <i class="bi bi-plus-lg me-1"></i>
+                <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
+                <i v-else class="bi bi-plus-lg me-1"></i>
                 {{ isSubmitting ? 'Adding...' : 'Add Inventory' }}
               </button>
             </div>
@@ -493,21 +585,33 @@
         </div>
       </div>
     </Transition>
+
+    <!-- Equipment Borrow Pass Modal -->
+    <BorrowPassModal
+      v-if="showBorrowPassModal && activeBorrowPass"
+      :borrow-data="activeBorrowPass"
+      @close="showBorrowPassModal = false"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive, onMounted } from 'vue';
 import { store } from '../../store/mockData';
+import { createEquipmentApi, borrowEquipmentApi, fetchMyBorrowDetailsApi } from '../../api/inventory';
+import BorrowPassModal from './BorrowPassModal.vue';
 
 const props = defineProps({
   items: { type: Array, required: true },
   loading: { type: Boolean, default: false },
-  isAdmin: { type: Boolean, default: false }
+  isAdmin: { type: Boolean, default: false },
+  borrowRecords: { type: Array, default: () => [] },
+  isBorrowLoading: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['borrow', 'return', 'add-item', 'add-stock']);
+const emit = defineEmits(['borrow', 'return', 'add-item', 'add-stock', 'admin-return', 'refresh-borrows']);
 
+const activeTab = ref('catalog');
 const searchQuery = ref('');
 const categoryFilter = ref('');
 const viewMode = ref('grid');
@@ -515,6 +619,10 @@ const panelItem = ref(null);
 const panelAction = ref(null);
 const panelQuantity = ref(1);
 const borrowerSectionRef = ref(null);
+
+const showBorrowPassModal = ref(false);
+const activeBorrowPass = ref(null);
+const isBorrowing = ref(false);
 
 const scrollToBorrowers = () => {
   if (borrowerSectionRef.value) {
@@ -531,16 +639,12 @@ const addForm = reactive({
   description: '',
   totalQuantity: 1,
   availableQuantity: 1,
-  condition: 'Good',
   storageLocation: '',
-  shelfNumber: '',
   image: null,
-  serialNumber: '',
-  purchaseDate: '',
-  notes: ''
 });
 const formErrors = reactive({});
 const formTouched = reactive({});
+const apiError = ref('');
 const showSuccessToast = ref(false);
 const imagePreview = ref(null);
 const fileInputRef = ref(null);
@@ -642,10 +746,101 @@ const maxQuantity = computed(() => {
   return panelAction.value === 'borrow' ? panelItem.value.available : panelItem.value.borrowed;
 });
 
-const handleBorrow = (item, quantity = 1) => {
-  emit('borrow', { item, quantity });
-  highlightedId.value = item.id;
-  setTimeout(() => { highlightedId.value = null; }, 1500);
+const myBorrowRecordsMap = ref({});
+
+const loadMyBorrowPasses = async () => {
+  if (props.isAdmin) return;
+  try {
+    const list = await fetchMyBorrowDetailsApi();
+    if (Array.isArray(list)) {
+      const map = {};
+      list.forEach((b) => {
+        if (b.equipment_id) {
+          if (!map[b.equipment_id] || new Date(b.created_at) > new Date(map[b.equipment_id].created_at)) {
+            map[b.equipment_id] = b;
+          }
+        }
+      });
+      myBorrowRecordsMap.value = map;
+    }
+  } catch (err) {}
+};
+
+onMounted(() => {
+  loadMyBorrowPasses();
+});
+
+const myBorrowedRecordForPanel = computed(() => {
+  if (!panelItem.value) return null;
+  return myBorrowRecordsMap.value[panelItem.value.id] || null;
+});
+
+const myBorrowedQuantityForPanel = computed(() => {
+  return myBorrowedRecordForPanel.value?.borrowed_quantity || 0;
+});
+
+const panelItemReturnDeadline = computed(() => {
+  if (myBorrowedRecordForPanel.value?.return_date) {
+    const d = new Date(myBorrowedRecordForPanel.value.return_date);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  return panelItem.value?.returnDeadline || 'N/A';
+});
+
+const openExistingBorrowPass = (item) => {
+  const rec = myBorrowRecordsMap.value[item.id];
+  if (rec) {
+    activeBorrowPass.value = {
+      ...rec,
+      equipment_name: rec.equipment_name || item.name,
+      equipment_category: rec.equipment_category || item.category,
+      equipment_image_url: rec.equipment_image_url || item.image || item.equipment_image_url,
+      storage_location: rec.storage_location || item.storage_location || item.location,
+    };
+    showBorrowPassModal.value = true;
+  }
+};
+
+const handleBorrow = async (item, quantity = 1) => {
+  isBorrowing.value = true;
+  try {
+    const borrowRes = await borrowEquipmentApi({
+      equipmentId: item.id,
+      quantity: quantity,
+    });
+
+    // Update local optimistic stock
+    item.available = Math.max(0, item.available - quantity);
+    item.borrowed = (item.borrowed || 0) + quantity;
+
+    // Immediately sync borrow map and return deadline
+    myBorrowRecordsMap.value[item.id] = {
+      ...borrowRes,
+      equipment_name: item.name,
+      equipment_category: item.category,
+      equipment_image_url: item.image || item.equipment_image_url,
+      storage_location: item.storage_location || item.location,
+    };
+    item.returnDeadline = new Date(borrowRes.return_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    emit('borrow', { item, quantity, borrowRes });
+
+    activeBorrowPass.value = {
+      ...borrowRes,
+      equipment_image_url: item.image || item.equipment_image_url,
+      equipment_category: item.category,
+      storage_location: item.storage_location || item.location,
+    };
+    showBorrowPassModal.value = true;
+    closePanel();
+
+    highlightedId.value = item.id;
+    setTimeout(() => { highlightedId.value = null; }, 1500);
+  } catch (err) {
+    alert(err.message || 'Failed to borrow equipment. Please try again.');
+  } finally {
+    isBorrowing.value = false;
+  }
 };
 
 const handleReturn = (item, quantity = 1) => {
@@ -689,15 +884,11 @@ const resetFilters = () => {
 };
 
 /* ── Add Inventory Form Logic ── */
-const conditionDotClass = computed(() => {
-  const c = addForm.condition;
-  if (c === 'Excellent') return 'dot-avail';
-  if (c === 'Good') return 'dot-limited';
-  return 'dot-out';
-});
-
 const existingCategories = computed(() => {
-  const cats = new Set(props.items.map(i => i.category));
+  const cats = new Set(props.items.map(i => i.category).filter(Boolean));
+  if (cats.size === 0) {
+    return ['Electronics', 'Microcontrollers', 'Sensors', 'Robotics', 'Tools', 'Audio/Visual'];
+  }
   return [...cats];
 });
 
@@ -706,15 +897,31 @@ const formPreviewItem = computed(() => ({
   category: addForm.category || 'Uncategorized',
   description: addForm.description || 'Equipment description will appear here.',
   available: addForm.availableQuantity,
-  borrowed: 0,
+  borrowed: Math.max(0, addForm.totalQuantity - addForm.availableQuantity),
   image: imagePreview.value || 'https://images.unsplash.com/photo-1581092335397-9583eb92d232?w=400&h=300&fit=crop'
 }));
 
-const requiredFields = computed(() => ['name', 'category', 'description', 'storageLocation']);
+const requiredFields = computed(() => ['name', 'category']);
 
 const isFormValid = computed(() => {
-  return requiredFields.value.every(f => addForm[f] && addForm[f].toString().trim());
+  return (
+    addForm.name.trim().length > 0 &&
+    addForm.category.trim().length > 0 &&
+    addForm.totalQuantity >= 1 &&
+    addForm.availableQuantity >= 0 &&
+    addForm.availableQuantity <= addForm.totalQuantity
+  );
 });
+
+const handleTotalQuantityChange = (newVal) => {
+  if (newVal < 1) return;
+  const prevTotal = addForm.totalQuantity;
+  addForm.totalQuantity = newVal;
+  // If available quantity was equal to total, keep it in sync
+  if (addForm.availableQuantity === prevTotal || addForm.availableQuantity > newVal) {
+    addForm.availableQuantity = newVal;
+  }
+};
 
 const validateField = (field) => {
   if (!formTouched[field]) return true;
@@ -767,14 +974,10 @@ const resetForm = () => {
   addForm.description = '';
   addForm.totalQuantity = 1;
   addForm.availableQuantity = 1;
-  addForm.condition = 'Good';
   addForm.storageLocation = '';
-  addForm.shelfNumber = '';
   addForm.image = null;
-  addForm.serialNumber = '';
-  addForm.purchaseDate = '';
-  addForm.notes = '';
   imagePreview.value = null;
+  apiError.value = '';
   Object.keys(formErrors).forEach(k => delete formErrors[k]);
   Object.keys(formTouched).forEach(k => delete formTouched[k]);
   isSubmitting.value = false;
@@ -785,35 +988,59 @@ const closeAddModal = () => {
   resetForm();
 };
 
-const submitAddItem = () => {
-  Object.keys(requiredFields.value).forEach(k => touchField(requiredFields.value[k]));
+const submitAddItem = async () => {
+  touchField('name');
+  touchField('category');
   if (!isFormValid.value) return;
 
   isSubmitting.value = true;
+  apiError.value = '';
 
-  const newItem = {
-    id: Date.now(),
-    name: addForm.name,
-    category: addForm.category,
-    description: addForm.description,
-    available: addForm.availableQuantity,
-    borrowed: 0,
-    image: imagePreview.value || `https://images.unsplash.com/photo-${1553408227 + Math.floor(Math.random() * 100)}?w=400&h=300&fit=crop`,
-    condition: addForm.condition,
-    location: addForm.storageLocation + (addForm.shelfNumber ? ` / ${addForm.shelfNumber}` : ''),
-    serialNumber: addForm.serialNumber || null,
-    purchaseDate: addForm.purchaseDate || null,
-    notes: addForm.notes || null
-  };
+  try {
+    const formData = new FormData();
+    formData.append('name', addForm.name.trim());
+    formData.append('category', addForm.category.trim());
+    if (addForm.description && addForm.description.trim()) {
+      formData.append('description', addForm.description.trim());
+    }
+    formData.append('total_quantity', addForm.totalQuantity);
+    formData.append('available_quantity', addForm.availableQuantity);
+    if (addForm.storageLocation && addForm.storageLocation.trim()) {
+      formData.append('storage_location', addForm.storageLocation.trim());
+    }
+    if (addForm.image) {
+      formData.append('equipment_image', addForm.image);
+    }
 
-  emit('add-item', newItem);
+    const createdEquipment = await createEquipmentApi(formData);
 
-  showSuccessToast.value = true;
-  setTimeout(() => {
-    showSuccessToast.value = false;
-    closeAddModal();
+    const mappedItem = {
+      id: createdEquipment.id,
+      name: createdEquipment.name,
+      category: createdEquipment.category,
+      description: createdEquipment.description || '',
+      available: createdEquipment.available_quantity,
+      borrowed: Math.max(0, createdEquipment.total_quantity - createdEquipment.available_quantity),
+      total_quantity: createdEquipment.total_quantity,
+      available_quantity: createdEquipment.available_quantity,
+      storage_location: createdEquipment.storage_location,
+      location: createdEquipment.storage_location || 'Campus Lab',
+      image: createdEquipment.equipment_image_url || imagePreview.value || 'https://images.unsplash.com/photo-1581092335397-9583eb92d232?w=400&h=300&fit=crop',
+      equipment_image_url: createdEquipment.equipment_image_url,
+    };
+
+    emit('add-item', mappedItem);
+
+    showSuccessToast.value = true;
+    setTimeout(() => {
+      showSuccessToast.value = false;
+      closeAddModal();
+      isSubmitting.value = false;
+    }, 1200);
+  } catch (err) {
+    apiError.value = err.message || 'Failed to create equipment';
     isSubmitting.value = false;
-  }, 1200);
+  }
 };
 </script>
 
@@ -2417,6 +2644,152 @@ select.inv-form-input option { background: #0f172a; color: #e2e8f0; }
 .toast-leave-to {
   opacity: 0;
   transform: translateY(16px);
+}
+
+/* ── Catalog & Borrowed List Tab & Table Styles ── */
+.inv-btn-catalog,
+.inv-btn-borrowed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.inv-btn-catalog:hover,
+.inv-btn-borrowed:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+.inv-btn-catalog.active,
+.inv-btn-borrowed.active {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(129, 140, 248, 0.4);
+  color: #c7d2fe;
+}
+.inv-badge-count {
+  background: #f59e0b;
+  color: #000000;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+}
+.inv-borrowed-container {
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+  animation: invFadeIn 0.3s ease;
+}
+.inv-borrowed-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+.inv-borrowed-title {
+  color: #f1f5f9;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+}
+.inv-btn-refresh {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.inv-btn-refresh:hover {
+  color: #ffffff;
+}
+.inv-table-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.inv-borrowed-table {
+  border-radius: 12px;
+  overflow: hidden;
+}
+.inv-borrowed-table th {
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.inv-borrowed-table td {
+  padding: 0.75rem 1rem;
+  border-color: rgba(255, 255, 255, 0.04);
+}
+
+/* ── Borrow Pass Banner in Panel ── */
+.inv-borrow-pass-banner {
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.12) 0%, rgba(14, 165, 233, 0.05) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+}
+.inv-pass-banner-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+.inv-pass-banner-sub {
+  font-size: 0.76rem;
+  color: #94a3b8;
+  margin-top: 0.15rem;
+}
+.inv-btn-view-pass {
+  background: #0284c7;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.inv-btn-view-pass:hover {
+  background: #0369a1;
+  transform: translateY(-1px);
+}
+.inv-panel-pass-action-btn {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.inv-panel-pass-action-btn:hover {
+  background: rgba(56, 189, 248, 0.22);
+  color: #fff;
+  border-color: #38bdf8;
 }
 
 /* ── Responsive ── */

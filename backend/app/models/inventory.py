@@ -10,10 +10,11 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, Uuid, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+from app.utils.enums import EquipmentCategory
 
 if TYPE_CHECKING:
     from app.models.student import Student
@@ -29,7 +30,15 @@ class Equipment(Base):
         default=uuid.uuid4,
     )
     name: Mapped[str] = mapped_column(String(150), nullable=False)
-    category: Mapped[str] = mapped_column(String(100), nullable=False)
+    category: Mapped[EquipmentCategory] = mapped_column(
+        Enum(
+            EquipmentCategory,
+            name="equipment_category",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        default=EquipmentCategory.OTHER,
+        nullable=False,
+    )
     description: Mapped[str | None] = mapped_column(Text)
     total_quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     available_quantity: Mapped[int] = mapped_column(Integer, nullable=False)

@@ -7,6 +7,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.utils.enums import EquipmentCategory
+
 
 # --------------------------------------------------------------- Equipment
 class EquipmentCreate(BaseModel):
@@ -15,7 +17,7 @@ class EquipmentCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(min_length=1, max_length=150)
-    category: str = Field(min_length=1, max_length=100)
+    category: EquipmentCategory
     description: str | None = None
     total_quantity: int = Field(ge=1)
     available_quantity: int = Field(ge=0)
@@ -29,7 +31,7 @@ class EquipmentUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str | None = Field(default=None, min_length=1, max_length=150)
-    category: str | None = Field(default=None, min_length=1, max_length=100)
+    category: EquipmentCategory | None = None
     description: str | None = None
     storage_location: str | None = Field(default=None, max_length=150)
     equipment_image_url: str | None = None
@@ -51,7 +53,7 @@ class EquipmentResponse(BaseModel):
 
     id: UUID
     name: str
-    category: str
+    category: EquipmentCategory
     description: str | None
     total_quantity: int
     available_quantity: int
@@ -68,17 +70,12 @@ class BorrowEquipmentRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     equipment_id: UUID
-    borrowed_quantity: int = Field(ge=1)
-    return_date: datetime
+    borrowed_quantity: int = Field(default=1, ge=1)
+    return_date: datetime | None = None
 
 
 class BorrowDetailResponse(BaseModel):
-    """Representation of a borrow detail entry.
-
-    ``equipment_name`` and ``student_name`` are resolved from the related
-    equipment and student and are therefore built by a helper rather than
-    loaded directly from the borrow detail row.
-    """
+    """Representation of a borrow detail entry."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -91,5 +88,40 @@ class BorrowDetailResponse(BaseModel):
     qr_code_url: str | None
     created_at: datetime
     equipment_name: str
+    equipment_category: str | None = None
+    equipment_image_url: str | None = None
+    storage_location: str | None = None
     student_name: str
     student_email: str
+    student_roll_number: str | None = None
+
+
+class VerifyBorrowPassRequest(BaseModel):
+    """Payload to verify an equipment borrow pass."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    qr_code_data: str | None = None
+    pass_id: str | None = None
+    borrow_id: UUID | None = None
+
+
+class VerifyBorrowPassResponse(BaseModel):
+    """Response returned after verifying a borrow pass."""
+
+    valid: bool
+    message: str
+    borrow_id: UUID | None = None
+    pass_id_code: str | None = None
+    student_name: str | None = None
+    student_email: str | None = None
+    student_roll_number: str | None = None
+    equipment_name: str | None = None
+    equipment_category: str | None = None
+    equipment_image_url: str | None = None
+    storage_location: str | None = None
+    borrowed_quantity: int | None = None
+    requested_date: datetime | None = None
+    return_date: datetime | None = None
+    qr_code_url: str | None = None
+    is_overdue: bool = False

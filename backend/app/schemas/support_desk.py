@@ -65,6 +65,7 @@ class DiscussionMessageResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    user_id: UUID | None = None
     author_name: str
     author_role: UserRole
     message: str

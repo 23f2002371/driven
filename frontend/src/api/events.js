@@ -131,3 +131,82 @@ export async function getEventApi(eventId) {
   }
   return data;
 }
+
+/**
+ * Update an event (supports JSON payload or FormData multipart payload).
+ * @param {string} eventId
+ * @param {object|FormData} payload
+ * @param {string} token
+ */
+export async function updateEventApi(eventId, payload, token) {
+  const headers = {};
+  const isFormData = payload instanceof FormData;
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE}/events/${eventId}`, {
+    method: 'PATCH',
+    headers,
+    body: isFormData ? payload : JSON.stringify(payload),
+  });
+
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    throw new Error(extractErrorMessage(data));
+  }
+
+  return data;
+}
+
+export async function deleteEventApi(eventId, token) {
+  const headers = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE}/events/${eventId}`, {
+    method: 'DELETE',
+    headers,
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(extractErrorMessage(data));
+  }
+
+  return true;
+}
+
+/**
+ * Register a student for an event.
+ * @param {object} payload - EventRegistrationCreate object
+ * @param {string} token - Bearer JWT token
+ */
+export async function registerForEventApi(payload, token) {
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE}/events/registrations`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    throw new Error(extractErrorMessage(data));
+  }
+
+  return data;
+}
+

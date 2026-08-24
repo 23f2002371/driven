@@ -18,6 +18,7 @@ from app.models.event import (
     EventAgenda,
     EventMentor,
     EventRegistration,
+    EventRejectReason,
     EventWinner,
 )
 from app.models.inventory import BorrowDetail, Equipment
@@ -40,6 +41,7 @@ __all__ = [
     "EventAgenda",
     "EventMentor",
     "EventRegistration",
+    "EventRejectReason",
     "EventWinner",
     "Responsibility",
     "Student",

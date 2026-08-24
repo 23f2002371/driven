@@ -1,5 +1,6 @@
 <template>
   <div class="cba">
+    <!-- Hero Section -->
     <section class="cba-hero">
       <div class="cba-hero-bg"></div>
       <div class="cba-hero-glow"></div>
@@ -8,38 +9,46 @@
           <div class="cba-hero-badge">Bounty Dashboard</div>
           <h1 class="cba-hero-title">Campus Bounties</h1>
           <p class="cba-hero-text">Post short-term opportunities, find talented students, and manage verified work submissions — all in one place.</p>
-          <button class="cba-btn-primary" @click="showCreateModal = true"><i class="bi bi-plus-lg me-2"></i>Create Bounty</button>
+          <button class="cba-btn-primary" @click="openCreateModal"><i class="bi bi-plus-lg me-2"></i>Create Bounty</button>
         </div>
         <div class="cba-hero-right">
           <div class="cba-stat-grid">
             <div class="cba-stat-card">
               <div class="cba-stat-icon purple"><i class="bi bi-briefcase-fill"></i></div>
-              <div class="cba-stat-body"><span class="cba-stat-value">{{ activeBounties }}</span><span class="cba-stat-label">Active Bounties</span></div>
+              <div class="cba-stat-body"><span class="cba-stat-value">{{ activeBountiesCount }}</span><span class="cba-stat-label">Active Bounties</span></div>
             </div>
             <div class="cba-stat-card">
               <div class="cba-stat-icon blue"><i class="bi bi-people-fill"></i></div>
-              <div class="cba-stat-body"><span class="cba-stat-value">{{ totalApplicants }}</span><span class="cba-stat-label">Total Applicants</span></div>
+              <div class="cba-stat-body"><span class="cba-stat-value">{{ totalApplicantsCount }}</span><span class="cba-stat-label">Total Applicants</span></div>
             </div>
             <div class="cba-stat-card">
               <div class="cba-stat-icon green"><i class="bi bi-check-circle-fill"></i></div>
-              <div class="cba-stat-body"><span class="cba-stat-value">{{ completedCount }}</span><span class="cba-stat-label">Completed</span></div>
+              <div class="cba-stat-body"><span class="cba-stat-value">{{ completedBountiesCount }}</span><span class="cba-stat-label">Completed</span></div>
             </div>
             <div class="cba-stat-card">
               <div class="cba-stat-icon amber"><i class="bi bi-box-seam-fill"></i></div>
-              <div class="cba-stat-body"><span class="cba-stat-value">{{ openPositions }}</span><span class="cba-stat-label">Open Positions</span></div>
+              <div class="cba-stat-body"><span class="cba-stat-value">{{ openSeatsCount }}</span><span class="cba-stat-label">Open Seats</span></div>
             </div>
           </div>
         </div>
       </div>
     </section>
 
+    <!-- Tabs -->
     <div class="cba-tabs">
-      <button class="cba-tab" :class="{ active: activeTab === 'bounties' }" @click="activeTab = 'bounties'"><i class="bi bi-grid-3x3-gap-fill me-2"></i>My Bounties</button>
-      <button class="cba-tab" :class="{ active: activeTab === 'applicants', disabled: !selectedBountyApps }" @click="goToApplicantsTab"><i class="bi bi-people-fill me-2"></i>Applicants <span v-if="selectedBountyApps" class="cba-tab-count">{{ currentApplicants.length }}</span></button>
-      <button class="cba-tab" :class="{ active: activeTab === 'workassign', disabled: !selectedBountyApps }" @click="goToWorkAssignTab"><i class="bi bi-briefcase-fill me-2"></i>Work Assign</button>
+      <button class="cba-tab" :class="{ active: activeTab === 'bounties' }" @click="activeTab = 'bounties'">
+        <i class="bi bi-grid-3x3-gap-fill me-2"></i>My Bounties
+      </button>
+      <button class="cba-tab" :class="{ active: activeTab === 'applicants', disabled: !selectedBountyApps }" @click="goToApplicantsTab">
+        <i class="bi bi-people-fill me-2"></i>Applicants
+        <span v-if="selectedBountyApps" class="cba-tab-count">{{ currentApplicants.length }}</span>
+      </button>
+      <button class="cba-tab" :class="{ active: activeTab === 'workassign', disabled: !selectedBountyApps }" @click="goToWorkAssignTab">
+        <i class="bi bi-briefcase-fill me-2"></i>Work Assign
+      </button>
     </div>
 
-    <!-- My Bounties Tab -->
+    <!-- ─── My Bounties Tab ─── -->
     <div v-if="activeTab === 'bounties'" class="cba-bounties-section">
       <div class="cba-toolbar">
         <div class="cba-search-wrap">
@@ -49,44 +58,73 @@
         <select v-model="statusFilter" class="cba-filter-select">
           <option value="All">All Status</option>
           <option value="open">Open</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
           <option value="closed">Closed</option>
-          <option value="draft">Draft</option>
         </select>
-        <button class="cba-btn-primary sm" @click="showCreateModal = true"><i class="bi bi-plus-lg me-1"></i>New Bounty</button>
+        <button class="cba-btn-primary sm" @click="openCreateModal"><i class="bi bi-plus-lg me-1"></i>New Bounty</button>
       </div>
 
-      <div v-if="myBountyList.length" class="cba-bounty-list">
-        <div v-for="bounty in myBountyList" :key="bounty.id" class="cba-bounty-row" :class="{ active: selectedBountyApps?.id === bounty.id }" @click="selectBounty(bounty)">
-          <div class="cba-bounty-img" :style="{ backgroundImage: `url(${bounty.image})` }"></div>
+      <div v-if="isLoadingBounties" class="cba-loading">
+        <span class="spinner-border spinner-border-sm me-2"></span>Loading bounties...
+      </div>
+
+      <div v-else-if="myBountyList.length" class="cba-bounty-list">
+        <div
+          v-for="bounty in myBountyList"
+          :key="bounty.id"
+          class="cba-bounty-row"
+          :class="{ active: selectedBountyApps?.id === bounty.id }"
+          @click="selectBounty(bounty)"
+        >
+          <div class="cba-bounty-icon-box" :style="bounty.image_url ? { backgroundImage: `url(${bounty.image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}">
+            <i v-if="!bounty.image_url" class="bi bi-briefcase-fill"></i>
+          </div>
           <div class="cba-bounty-info">
-            <h4>{{ bounty.title }}</h4>
-            <span class="cba-bounty-cat">{{ bounty.category }}</span>
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+              <h4 class="m-0">{{ bounty.title }}</h4>
+              <span class="cba-bounty-cat">{{ formatDomainName(bounty.domain?.name) }}</span>
+            </div>
+            <p class="cba-bounty-desc-preview">{{ bounty.description }}</p>
             <div class="cba-bounty-meta">
-              <span><i class="bi bi-cash-stack"></i>{{ bounty.reward }}</span>
-              <span><i class="bi bi-calendar3"></i>{{ bounty.deadline }}</span>
-              <span><i class="bi bi-people"></i>{{ bounty.applicantsCount }} applicants</span>
+              <span><i class="bi bi-cash-stack text-success"></i>₹{{ bounty.reward }}</span>
+              <span><i class="bi bi-calendar3 text-primary"></i>Deadline: {{ formatDisplayDate(bounty.application_deadline) }}</span>
+              <span><i class="bi bi-people text-info"></i>{{ bounty.student_seats }} Seats</span>
+              <span><i class="bi bi-hourglass-split text-warning"></i>{{ bounty.duration }}</span>
+              <span v-if="bounty.technologies?.length" class="text-secondary"><i class="bi bi-cpu text-info"></i>{{ bounty.technologies.map(t => t.name).join(', ') }}</span>
             </div>
           </div>
-          <div class="cba-bounty-status">
-            <span class="cba-status-badge" :class="bounty.status">{{ bounty.status.charAt(0).toUpperCase() + bounty.status.slice(1) }}</span>
-            <span class="cba-bounty-apps-btn" @click.stop="selectBounty(bounty)">View Applicants <i class="bi bi-chevron-right ms-1"></i></span>
+          <div class="cba-bounty-status" @click.stop>
+            <span class="cba-status-badge" :class="bounty.status">{{ (bounty.status || 'open').toUpperCase() }}</span>
+            <div class="d-flex align-items-center gap-2 mt-2">
+              <button class="cba-bounty-apps-btn" @click="selectBounty(bounty)">
+                View Applicants <i class="bi bi-chevron-right ms-1"></i>
+              </button>
+              <button class="cba-btn-delete-sm" title="Delete Bounty" @click="handleDeleteBounty(bounty)">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
       <div v-else class="cba-empty">
         <i class="bi bi-inbox"></i>
         <h3>No bounties yet</h3>
-        <p>Create your first bounty to find talented students.</p>
-        <button class="cba-btn-primary" @click="showCreateModal = true"><i class="bi bi-plus-lg me-1"></i>Create Bounty</button>
+        <p>Create your first bounty to find talented students and delegate project work.</p>
+        <button class="cba-btn-primary" @click="openCreateModal"><i class="bi bi-plus-lg me-1"></i>Create Bounty</button>
       </div>
     </div>
 
-    <!-- Applicants Tab -->
+    <!-- ─── Applicants Tab ─── -->
     <div v-if="activeTab === 'applicants'" class="cba-applicants-section">
       <div v-if="selectedBountyApps" class="cba-apps-header">
         <button class="cba-back-btn" @click="selectedBountyApps = null; selectedApplicant = null"><i class="bi bi-arrow-left me-1"></i>Back</button>
-        <h3>{{ selectedBountyApps.title }} — Applicants</h3>
-        <span class="cba-apps-count">{{ currentApplicants.length }} total</span>
+        <div>
+          <h3 class="m-0">{{ selectedBountyApps.title }} — Applicants</h3>
+          <span class="text-secondary small">Seats: {{ selectedBountyApps.student_seats }}</span>
+        </div>
+        <span class="cba-apps-count ms-auto">{{ currentApplicants.length }} Total Applicants</span>
       </div>
 
       <div v-if="!selectedBountyApps" class="cba-apps-prompt">
@@ -95,28 +133,47 @@
         <p>Click on a bounty from "My Bounties" tab to view its applicants.</p>
       </div>
 
+      <div v-else-if="isLoadingApplicants" class="cba-loading">
+        <span class="spinner-border spinner-border-sm me-2"></span>Loading applicants...
+      </div>
+
       <div v-else-if="currentApplicants.length" class="cba-apps-list">
-        <div v-for="app in currentApplicants" :key="app.id" class="cba-applicant-row" :class="{ rejected: app.status === 'rejected' }" @click="openWorkAssign(app)">
-          <div class="cba-applicant-avatar" :class="{ green: app.status === 'accepted' || app.status === 'assigned', yellow: app.status === 'pending' }">
-            {{ app.name?.charAt(0) || 'S' }}
+        <div
+          v-for="app in currentApplicants"
+          :key="app.id"
+          class="cba-applicant-row"
+          :class="{ rejected: app.status === 'rejected', accepted: app.status === 'accepted' }"
+          @click="openWorkAssign(app)"
+        >
+          <div class="cba-applicant-avatar" :class="{ green: app.status === 'accepted', yellow: app.status === 'pending', red: app.status === 'rejected' }">
+            {{ getInitials(app.student?.name) }}
           </div>
           <div class="cba-applicant-info">
-            <h5>{{ app.name || 'Student' }}</h5>
-            <span class="cba-app-dept">{{ app.department || 'Computer Science' }}</span>
+            <h5>{{ app.student?.name || 'Student' }} <small class="text-muted">({{ app.student?.student_id }})</small></h5>
+            <span class="cba-app-dept"><i class="bi bi-mortarboard me-1"></i>{{ formatDept(app.student?.department) }} · {{ app.student?.email }}</span>
+            <div class="d-flex align-items-center gap-2 flex-wrap mt-1">
+              <span class="badge bg-secondary-subtle text-light" style="font-size: 0.72rem;">Availability: {{ app.availability }}</span>
+              <span v-if="app.matched_technologies?.length" class="badge bg-primary-subtle text-primary" style="font-size: 0.72rem;">
+                Matches: {{ app.matched_technologies.join(', ') }}
+              </span>
+              <a v-if="app.resume" :href="app.resume" target="_blank" class="text-info small text-decoration-none" @click.stop>
+                <i class="bi bi-link-45deg"></i>Resume / Portfolio
+              </a>
+            </div>
           </div>
           <div class="cba-app-status-badge" :class="app.status">
-            {{ app.status.charAt(0).toUpperCase() + app.status.slice(1) }}
-          </div>
-          <div class="cba-app-progress-compact">
-            <div class="cba-compact-bar">
-              <div class="cba-compact-fill" :style="{ width: progressPercent(app) + '%' }"></div>
-            </div>
-            <span class="cba-compact-label">{{ progressLabel(app) }}</span>
+            {{ (app.status || 'pending').toUpperCase() }}
           </div>
           <div class="cba-app-actions" @click.stop>
-            <button v-if="app.status === 'pending'" class="cba-btn-reject sm" @click="updateAppStatus(app.id, 'rejected')"><i class="bi bi-x-lg"></i></button>
-            <button v-if="app.status === 'pending'" class="cba-btn-accept sm" @click="updateAppStatus(app.id, 'accepted')"><i class="bi bi-check-lg"></i></button>
-            <button v-if="app.status === 'accepted' || app.status === 'assigned'" class="cba-btn-assign sm" @click="openWorkAssign(app)"><i class="bi bi-briefcase-fill me-1"></i>Assign Work</button>
+            <button v-if="app.status === 'pending'" class="cba-btn-reject sm" title="Reject Application" @click="handleUpdateAppStatus(app.id, 'rejected')">
+              <i class="bi bi-x-lg"></i>
+            </button>
+            <button v-if="app.status === 'pending'" class="cba-btn-accept sm" title="Accept Application" @click="handleUpdateAppStatus(app.id, 'accepted')">
+              <i class="bi bi-check-lg"></i>
+            </button>
+            <button v-if="app.status === 'accepted'" class="cba-btn-assign sm" @click="openWorkAssign(app)">
+              <i class="bi bi-briefcase-fill me-1"></i>Assign / View Work
+            </button>
           </div>
         </div>
       </div>
@@ -124,11 +181,11 @@
       <div v-else class="cba-empty">
         <i class="bi bi-people"></i>
         <h3>No applicants yet</h3>
-        <p>Applicants will appear here once students apply.</p>
+        <p>Students who apply to this bounty will appear here.</p>
       </div>
     </div>
 
-    <!-- Work Assign Tab -->
+    <!-- ─── Work Assign Tab ─── -->
     <div v-if="activeTab === 'workassign'" class="cba-workassign-section">
       <div v-if="!selectedBountyApps" class="cba-apps-prompt">
         <i class="bi bi-hand-index-thumb"></i>
@@ -138,8 +195,8 @@
 
       <div v-else-if="!selectedApplicant" class="cba-apps-prompt">
         <i class="bi bi-person-badge"></i>
-        <h3>Select an applicant</h3>
-        <p>Go to the Applicants tab and click on an applicant to assign work here.</p>
+        <h3>Select an accepted applicant</h3>
+        <p>Go to the Applicants tab and click on an accepted applicant to assign work here.</p>
         <button class="cba-btn-primary sm" @click="activeTab = 'applicants'"><i class="bi bi-people-fill me-1"></i>View Applicants</button>
       </div>
 
@@ -148,310 +205,905 @@
           <div class="cwa-header">
             <button class="cba-back-btn" @click="selectedApplicant = null"><i class="bi bi-arrow-left me-1"></i>Back</button>
             <div class="cwa-header-info">
-              <div class="cwa-header-avatar">{{ selectedApplicant.name?.charAt(0) || 'S' }}</div>
+              <div class="cwa-header-avatar">{{ getInitials(selectedApplicant.student?.name) }}</div>
               <div>
-                <h4>{{ selectedApplicant.name || 'Student' }} — {{ selectedApplicant.assignedTask || 'No task assigned' }}</h4>
-                <span>{{ selectedApplicant.department }} · {{ selectedBountyApps.title }}</span>
+                <h4 class="m-0">{{ selectedApplicant.student?.name || 'Student' }} — {{ assignedWorkData?.title || 'Assign Work' }}</h4>
+                <span class="text-secondary small">{{ selectedApplicant.student?.department }} · {{ selectedBountyApps.title }}</span>
               </div>
-              <span class="cba-work-status-badge" :class="selectedApplicant.progress || selectedApplicant.status">{{ progressLabel(selectedApplicant) }}</span>
+              <span v-if="assignedWorkData" class="cba-work-status-badge ms-auto" :class="assignedWorkData.status">
+                {{ (assignedWorkData.status || 'assigned').toUpperCase() }}
+              </span>
             </div>
           </div>
 
           <div class="cwa-body">
-            <!-- Progress -->
+            <!-- Progress Tracker -->
             <div class="cwa-progress-section">
               <div class="cwa-progress-track">
-                <div class="cwa-progress-fill" :style="{ width: progressPercent(selectedApplicant) + '%' }"></div>
+                <div class="cwa-progress-fill" :style="{ width: workProgressPercent + '%' }"></div>
               </div>
               <div class="cwa-progress-steps">
-                <div class="cwa-step" :class="{ active: progressLevel(selectedApplicant) >= 1 }"><i class="bi bi-person-check-fill"></i><span>Accepted</span></div>
-                <div class="cwa-step" :class="{ active: progressLevel(selectedApplicant) >= 2 }"><i class="bi bi-briefcase-fill"></i><span>Assigned</span></div>
-                <div class="cwa-step" :class="{ active: progressLevel(selectedApplicant) >= 3 }"><i class="bi bi-gear-fill"></i><span>In Progress</span></div>
-                <div class="cwa-step" :class="{ active: progressLevel(selectedApplicant) >= 4 }"><i class="bi bi-check-circle-fill"></i><span>Completed</span></div>
+                <div class="cwa-step" :class="{ active: workProgressLevel >= 1 }"><i class="bi bi-person-check-fill"></i><span>Accepted</span></div>
+                <div class="cwa-step" :class="{ active: workProgressLevel >= 2 }"><i class="bi bi-briefcase-fill"></i><span>Assigned</span></div>
+                <div class="cwa-step" :class="{ active: workProgressLevel >= 3 }"><i class="bi bi-gear-fill"></i><span>In Progress</span></div>
+                <div class="cwa-step" :class="{ active: workProgressLevel >= 4 }"><i class="bi bi-check-circle-fill"></i><span>Completed</span></div>
               </div>
             </div>
 
-            <!-- Assign Work Form -->
-            <div v-if="!selectedApplicant.assignedTaskDescription" class="cwa-form-card">
-              <h5><i class="bi bi-pencil-square me-2"></i>Describe & Assign Work</h5>
+            <!-- Assign Work Form (if no work assigned yet) -->
+            <div v-if="!assignedWorkData" class="cwa-form-card">
+              <h5><i class="bi bi-pencil-square me-2 text-indigo"></i>Describe & Assign Work</h5>
+              <p class="text-secondary small mb-3">Define the specific assignment, deadlines, and expected deliverables for {{ selectedApplicant.student?.name }}.</p>
+
               <div class="cba-form-group">
-                <label>Task Title</label>
-                <input v-model="workForm.taskTitle" type="text" class="cba-input" placeholder="e.g. Build landing page hero section" />
-              </div>
-              <div class="cba-form-group">
-                <label>Task Description</label>
-                <textarea v-model="workForm.taskDescription" class="cba-input cba-textarea" rows="4" placeholder="Describe the work in detail, including expectations and deliverables..."></textarea>
+                <label>Task Title *</label>
+                <input v-model="workForm.taskTitle" type="text" class="cba-input" placeholder="e.g. Develop Responsive Hero Section & Telemetry Visualizer" />
               </div>
               <div class="cba-form-group">
-                <label>Deliverables (one per line)</label>
-                <textarea v-model="workForm.deliverables" class="cba-input cba-textarea" rows="3" placeholder="List expected deliverables..."></textarea>
+                <label>Task Description *</label>
+                <textarea v-model="workForm.taskDescription" class="cba-input cba-textarea" rows="4" placeholder="Describe the task instructions, requirements, and milestones..."></textarea>
               </div>
-              <div class="cba-form-row">
-                <div class="cba-form-group">
-                  <label>Deadline</label>
-                  <input v-model="workForm.deadline" type="text" class="cba-input" placeholder="e.g. Aug 20, 2026" />
-                </div>
-                <div class="cba-form-group">
-                  <label>Priority</label>
-                  <select v-model="workForm.priority" class="cba-input">
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
+              <div class="cba-form-group">
+                <label>Deliverables (one per line) *</label>
+                <textarea v-model="workForm.deliverables" class="cba-input cba-textarea" rows="3" placeholder="Setup frontend repo and components&#10;Implement live websocket chart&#10;Submit PR and documentation"></textarea>
               </div>
-              <button class="cba-btn-primary" @click="assignWork"><i class="bi bi-send-fill me-2"></i>Assign Work</button>
+              <div class="cba-form-group">
+                <label>Deadline *</label>
+                <input v-model="workForm.deadline" type="datetime-local" class="cba-input" />
+              </div>
+              <button class="cba-btn-primary mt-3" :disabled="isSubmittingWork" @click="handleAssignWork">
+                <span v-if="isSubmittingWork" class="spinner-border spinner-border-sm me-2"></span>
+                <i v-else class="bi bi-send-fill me-2"></i>Assign Work to Student
+              </button>
             </div>
 
-            <!-- Assigned Work View -->
+            <!-- Existing Assigned Work View -->
             <div v-else class="cwa-assigned-section">
               <div class="cwa-assigned-card">
                 <div class="cwa-assigned-title">
-                  <i class="bi bi-briefcase-fill"></i>
-                  <h5>{{ selectedApplicant.assignedTask }}</h5>
-                  <span class="cba-priority-badge" :class="selectedApplicant.assignedPriority">{{ selectedApplicant.assignedPriority }}</span>
+                  <i class="bi bi-briefcase-fill text-primary"></i>
+                  <h5 class="m-0">{{ assignedWorkData.title }}</h5>
                 </div>
-                <div class="cwa-assigned-desc">
+                <div class="cwa-assigned-desc mt-2">
                   <strong>Description:</strong>
-                  <p>{{ selectedApplicant.assignedTaskDescription }}</p>
+                  <p class="mt-1 text-light">{{ assignedWorkData.task_description }}</p>
                 </div>
-                <div v-if="selectedApplicant.deliverablesList?.length" class="cwa-assigned-deli">
-                  <strong>Deliverables:</strong>
-                  <ul>
-                    <li v-for="(d, i) in selectedApplicant.deliverablesList" :key="i">{{ d }}</li>
-                  </ul>
-                </div>
-                <div class="cwa-assigned-meta">
-                  <span><i class="bi bi-calendar3"></i>Deadline: {{ selectedApplicant.assignedDeadline || 'TBD' }}</span>
+                <div class="cwa-assigned-meta mt-2">
+                  <span><i class="bi bi-calendar3 me-1 text-info"></i>Deadline: {{ formatDisplayDate(assignedWorkData.deadline) }}</span>
                 </div>
               </div>
 
-              <div v-if="selectedApplicant.checklist?.length" class="cwa-checklist-card">
-                <h5><i class="bi bi-list-check me-2"></i>Progress Checklist</h5>
+              <!-- Deliverables Checklist -->
+              <div v-if="assignedWorkData.deliverables?.length" class="cwa-checklist-card">
+                <h5><i class="bi bi-list-check me-2 text-success"></i>Deliverables Checklist</h5>
                 <div class="cwa-checklist">
-                  <div v-for="item in selectedApplicant.checklist" :key="item.id" class="cwa-check-item" :class="{ done: item.completed }">
-                    <i class="bi" :class="item.completed ? 'bi-check-circle-fill' : 'bi-circle'"></i>
-                    <span>{{ item.label }}</span>
+                  <div
+                    v-for="d in assignedWorkData.deliverables"
+                    :key="d.id"
+                    class="cwa-check-item"
+                    :class="{ done: d.status === 'completed' }"
+                    @click="toggleDeliverableStatus(d)"
+                  >
+                    <i class="bi" :class="d.status === 'completed' ? 'bi-check-circle-fill text-success' : 'bi-circle'"></i>
+                    <span>{{ d.title }}</span>
+                    <span class="badge ms-auto" :class="d.status === 'completed' ? 'bg-success' : 'bg-secondary'">{{ d.status }}</span>
                   </div>
                 </div>
               </div>
 
-              <!-- Submissions Section -->
-              <div v-if="studentSubmission" class="cwa-submission-card">
-                <h5><i class="bi bi-upload me-2"></i>Student Submission</h5>
-                <div class="cwa-sub-top">
-                  <p class="cwa-sub-notes">{{ studentSubmission.notes || 'No additional notes.' }}</p>
-                </div>
-                <div class="cba-sub-links">
-                  <a v-if="studentSubmission.githubLink" :href="studentSubmission.githubLink" target="_blank" class="cba-link-btn"><i class="bi bi-github"></i> Repository</a>
-                  <a v-if="studentSubmission.demoLink" :href="studentSubmission.demoLink" target="_blank" class="cba-link-btn"><i class="bi bi-link-45deg"></i> Live Demo</a>
-                </div>
-                <div v-if="studentSubmission.status === 'submitted'" class="cwa-sub-actions">
-                  <button class="cba-btn-outline" @click="requestChanges(selectedApplicant)"><i class="bi bi-arrow-counterclockwise me-1"></i>Request Changes</button>
-                  <button class="cba-btn-accept" @click="approveSubmission(selectedApplicant)"><i class="bi bi-check-lg me-1"></i>Approve</button>
-                </div>
-                <div v-if="studentSubmission.status === 'approved'" class="cwa-approved-banner">
-                  <i class="bi bi-patch-check-fill"></i>
-                  <span>Approved — Portfolio & certificate generated</span>
-                </div>
-                <div v-if="studentSubmission.status === 'changes_requested'" class="cwa-changes-banner">
-                  <i class="bi bi-arrow-counterclockwise"></i>
-                  <span>Changes requested — awaiting re-submission</span>
+              <!-- Admin Status Actions -->
+              <div class="cwa-mark-card">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                  <div>
+                    <h5 class="m-0"><i class="bi bi-patch-check-fill text-primary me-2"></i>Task Status Control</h5>
+                    <span class="text-secondary small">Current Status: <strong class="text-light">{{ (assignedWorkData.status || '').toUpperCase() }}</strong></span>
+                  </div>
+                  <div class="d-flex gap-2">
+                    <button
+                      v-if="assignedWorkData.status !== 'in_progress'"
+                      class="cba-btn-outline sm"
+                      @click="handleUpdateWorkStatus('in_progress')"
+                    >
+                      <i class="bi bi-gear-fill me-1"></i>Set In Progress
+                    </button>
+                    <button
+                      v-if="assignedWorkData.status !== 'completed'"
+                      class="cba-btn-accept sm"
+                      @click="handleUpdateWorkStatus('completed')"
+                    >
+                      <i class="bi bi-check-circle-fill me-1"></i>Mark Completed
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              <div v-else-if="selectedApplicant.assignedTaskDescription" class="cwa-mark-card">
-                  <i class="bi bi-check2-square"></i>
-                  <h5>All deliverables completed?</h5>
-                  <p>Verify the checklist above and mark this work as completed.</p>
-                  <button class="cba-btn-accept" @click="markCompleted(selectedApplicant)"><i class="bi bi-check-lg me-2"></i>Mark Completed</button>
-                </div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Create Bounty Modal -->
+    <!-- ─── Create Bounty Modal ─── -->
     <div v-if="showCreateModal" class="cba-modal-overlay" @click.self="showCreateModal = false">
       <div class="cba-modal cba-modal-wide">
         <div class="cba-modal-header">
-          <h3>Create New Bounty</h3>
+          <h3>Create New Campus Bounty</h3>
           <button class="cba-modal-close" @click="showCreateModal = false"><i class="bi bi-x-lg"></i></button>
         </div>
         <div class="cba-modal-body">
-          <div class="cba-form-row">
-            <div class="cba-form-group flex-1">
-              <label>Title</label>
-              <input v-model="bountyForm.title" type="text" class="cba-input" placeholder="e.g. Build Hackathon Website" />
-            </div>
-            <div class="cba-form-group">
-              <label>Category</label>
-              <select v-model="bountyForm.category" class="cba-input">
-                <option v-for="c in store.categoryFilters.filter(c => c !== 'All')" :key="c" :value="c">{{ c }}</option>
-              </select>
-            </div>
-          </div>
+          <!-- Title -->
           <div class="cba-form-group">
-            <label>Description</label>
-            <textarea v-model="bountyForm.description" class="cba-input cba-textarea" rows="4" placeholder="Describe the opportunity in detail..."></textarea>
+            <label>Bounty Title *</label>
+            <input v-model="bountyForm.title" type="text" class="cba-input" placeholder="e.g. Build Real-Time IoT Telemetry Dashboard" />
           </div>
+
+          <!-- Multiple Domains Selection -->
           <div class="cba-form-group">
-            <label>Required Skills</label>
-            <div class="cba-chips">
-              <button v-for="s in allSkills" :key="s" class="cba-chip" :class="{ active: bountyForm.skills.includes(s) }" @click="toggleSkill(s)">{{ s }}</button>
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="m-0">Domains / Categories * <small class="text-secondary">({{ bountyForm.domain_ids.length }} selected)</small></label>
+              <div class="d-flex gap-2">
+                <button type="button" class="cba-link-btn" @click="selectAllDomains">Select All</button>
+                <button type="button" class="cba-link-btn" @click="clearDomains">Reset</button>
+              </div>
+            </div>
+            <div class="cba-chips cba-domain-chips">
+              <button
+                v-for="d in availableDomains"
+                :key="d.id"
+                type="button"
+                class="cba-chip"
+                :class="{ active: bountyForm.domain_ids.includes(d.id) }"
+                @click="toggleDomain(d.id)"
+              >
+                <i class="bi" :class="bountyForm.domain_ids.includes(d.id) ? 'bi-check-circle-fill text-primary' : 'bi-plus'"></i>
+                {{ formatDomainName(d.name) }}
+              </button>
             </div>
           </div>
-          <div class="cba-form-row">
-            <div class="cba-form-group">
-              <label>Reward</label>
-              <input v-model="bountyForm.reward" type="text" class="cba-input" placeholder="e.g. ₹2,500" />
+
+          <!-- Description -->
+          <div class="cba-form-group">
+            <label>Description *</label>
+            <textarea v-model="bountyForm.description" class="cba-input cba-textarea" rows="3" placeholder="Describe the bounty objectives, deliverables, and student requirements..."></textarea>
+          </div>
+
+          <!-- Technologies (Filtered across all chosen domains) -->
+          <div class="cba-form-group">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="m-0">Required Technologies * <small class="text-secondary">({{ bountyForm.technologies.length }} selected)</small></label>
+              <div v-if="selectedDomainTechs.length" class="d-flex gap-2">
+                <button type="button" class="cba-link-btn" @click="selectAllTechs">Select All</button>
+                <button type="button" class="cba-link-btn" @click="bountyForm.technologies = []">Clear</button>
+              </div>
             </div>
-            <div class="cba-form-group">
-              <label>Difficulty</label>
-              <select v-model="bountyForm.difficulty" class="cba-input">
-                <option value="Easy">Easy</option>
-                <option value="Medium">Medium</option>
-                <option value="Advanced">Advanced</option>
-              </select>
+            <div v-if="selectedDomainTechs.length" class="cba-chips">
+              <button
+                v-for="tech in selectedDomainTechs"
+                :key="tech.id"
+                type="button"
+                class="cba-chip"
+                :class="{ active: bountyForm.technologies.includes(tech.id) }"
+                @click="toggleTech(tech.id)"
+              >
+                <i class="bi" :class="bountyForm.technologies.includes(tech.id) ? 'bi-check-circle-fill text-primary' : 'bi-plus'"></i>
+                {{ tech.name }}
+              </button>
+            </div>
+            <div v-else class="text-secondary small fst-italic">
+              Select at least one Domain above to view and assign required technologies.
             </div>
           </div>
+
+          <!-- Cover Image Upload (Cloudinary) -->
+          <div class="cba-form-group">
+            <label>Bounty Cover Image (Cloudinary)</label>
+            <div class="cba-upload-zone" @click="fileInputRef?.click()" @dragover.prevent @drop.prevent="handleFileDrop" :class="{ 'has-image': bountyForm.image_preview }">
+              <input ref="fileInputRef" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden @change="handleFileUpload" />
+              <template v-if="!bountyForm.image_preview">
+                <div class="cba-upload-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+                <p class="cba-upload-text">Drag & drop cover image or <span>Browse files</span></p>
+                <p class="cba-upload-hint">PNG, JPG, WebP &middot; Uploaded directly to Cloudinary</p>
+              </template>
+              <template v-else>
+                <img :src="bountyForm.image_preview" alt="Cover Preview" class="cba-upload-preview" />
+                <button type="button" class="cba-upload-remove" @click.stop="removeImage" title="Remove image"><i class="bi bi-x-lg"></i></button>
+              </template>
+            </div>
+          </div>
+
+          <!-- Reward & Duration -->
           <div class="cba-form-row">
             <div class="cba-form-group">
-              <label>Deadline</label>
-              <input v-model="bountyForm.deadline" type="text" class="cba-input" placeholder="e.g. Aug 15, 2026" />
+              <label>Reward (₹) *</label>
+              <input v-model="bountyForm.reward" type="number" min="0" class="cba-input" placeholder="e.g. 2500" />
             </div>
             <div class="cba-form-group">
-              <label>Duration</label>
+              <label>Duration *</label>
               <input v-model="bountyForm.duration" type="text" class="cba-input" placeholder="e.g. 2 Weeks" />
             </div>
           </div>
-          <div class="cba-form-group">
-            <label>Number of Students Needed</label>
-            <div class="cba-stepper">
-              <button class="cba-step-btn" @click="bountyForm.studentsNeeded > 1 && bountyForm.studentsNeeded--"><i class="bi bi-dash"></i></button>
-              <span class="cba-step-val">{{ bountyForm.studentsNeeded }}</span>
-              <button class="cba-step-btn" @click="bountyForm.studentsNeeded++"><i class="bi bi-plus"></i></button>
+
+          <!-- Deadline & Seats -->
+          <div class="cba-form-row">
+            <div class="cba-form-group">
+              <label>Application Deadline *</label>
+              <input v-model="bountyForm.deadline" type="datetime-local" class="cba-input" />
+            </div>
+            <div class="cba-form-group">
+              <label>Student Seats Needed *</label>
+              <div class="cba-stepper">
+                <button type="button" class="cba-step-btn" @click="bountyForm.studentsNeeded > 1 && bountyForm.studentsNeeded--"><i class="bi bi-dash"></i></button>
+                <span class="cba-step-val">{{ bountyForm.studentsNeeded }}</span>
+                <button type="button" class="cba-step-btn" @click="bountyForm.studentsNeeded++"><i class="bi bi-plus"></i></button>
+              </div>
             </div>
           </div>
+
+          <!-- Key Responsibilities (One input per box) -->
           <div class="cba-form-group">
-            <label>Attachments (optional)</label>
-            <div class="cba-upload-zone" @click="attachInput?.click()">
-              <input ref="attachInput" type="file" hidden multiple @change="handleAttachments" />
-              <i class="bi bi-paperclip"></i>
-              <span v-if="!bountyForm.attachments.length">Click to add attachments</span>
-              <span v-else><i class="bi bi-check-circle-fill me-1"></i>{{ bountyForm.attachments.length }} file(s) selected</span>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <label class="m-0">Key Responsibilities (One per box) *</label>
+              <button type="button" class="cba-btn-add-resp" @click="addResponsibility">
+                <i class="bi bi-plus-lg me-1"></i>Add Responsibility
+              </button>
+            </div>
+            <div class="cba-resp-list">
+              <div v-for="(resp, index) in bountyForm.responsibilities" :key="index" class="cba-resp-row">
+                <span class="cba-resp-num">{{ index + 1 }}</span>
+                <input
+                  v-model="bountyForm.responsibilities[index]"
+                  type="text"
+                  class="cba-input flex-1"
+                  :placeholder="`Responsibility ${index + 1} (e.g. Design UI wireframes in Figma)`"
+                  @keydown.enter.prevent="addResponsibility"
+                />
+                <button
+                  type="button"
+                  class="cba-btn-delete-sm"
+                  :disabled="bountyForm.responsibilities.length <= 1"
+                  title="Remove responsibility"
+                  @click="removeResponsibility(index)"
+                >
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </div>
             </div>
           </div>
         </div>
+
         <div class="cba-modal-footer">
-          <button class="cba-btn-glass" @click="saveDraft">Save Draft</button>
-          <button class="cba-btn-primary" @click="publishBounty">Publish Bounty <i class="bi bi-arrow-right ms-1"></i></button>
+          <button class="cba-btn-glass" @click="showCreateModal = false">Cancel</button>
+          <button class="cba-btn-primary" :disabled="isSubmittingBounty" @click="publishBounty">
+            <span v-if="isSubmittingBounty" class="spinner-border spinner-border-sm me-2"></span>
+            <i v-else class="bi bi-send-check-fill me-1"></i>Publish Bounty
+          </button>
         </div>
       </div>
     </div>
 
-    <div v-if="showToast" class="cba-toast" :class="{ success: toastType === 'success', confetti: toastType === 'confetti' }">
-      <i :class="toastType === 'success' ? 'bi bi-check-circle-fill' : 'bi bi-star-fill'"></i>
+    <!-- Toast Notification -->
+    <div v-if="showToast" class="cba-toast" :class="{ success: toastType === 'success', error: toastType === 'error' }">
+      <i :class="toastType === 'success' ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-triangle-fill'"></i>
       {{ toastMessage }}
-    </div>
-    <div v-if="showConfetti" class="cba-confetti-container">
-      <div v-for="i in 30" :key="i" class="cba-confetti-piece" :style="{
-        left: Math.random() * 100 + '%',
-        animationDelay: Math.random() * 2 + 's',
-        animationDuration: (2 + Math.random() * 2) + 's',
-        background: ['#818cf8','#34d399','#fbbf24','#fb7185','#60a5fa','#a78bfa'][Math.floor(Math.random() * 6)]
-      }"></div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive, onMounted } from 'vue';
 import { store } from '../store/mockData';
+import {
+  fetchBountiesApi,
+  createBountyApi,
+  deleteBountyApi,
+  fetchBountyApplicationsApi,
+  updateApplicationStatusApi,
+  assignWorkApi,
+  fetchAssignedWorkApi,
+  updateAssignedWorkApi,
+  fetchDomainsAndTechsApi,
+  uploadBountyImageApi,
+} from '../api/bounty';
+
+const DEFAULT_DOMAINS = [
+  {
+    id: 'web-dev',
+    name: 'WEB_DEVELOPMENT',
+    technologies: [
+      { id: 'tech-react', name: 'REACT' },
+      { id: 'tech-vue', name: 'VUE_JS' },
+      { id: 'tech-next', name: 'NEXT_JS' },
+      { id: 'tech-nuxt', name: 'NUXT_JS' },
+      { id: 'tech-html', name: 'HTML' },
+      { id: 'tech-css', name: 'CSS' },
+      { id: 'tech-tailwind', name: 'TAILWIND_CSS' },
+      { id: 'tech-bootstrap', name: 'BOOTSTRAP' },
+      { id: 'tech-angular', name: 'ANGULAR' },
+      { id: 'tech-svelte', name: 'SVELTE' },
+    ],
+  },
+  {
+    id: 'backend-dev',
+    name: 'BACKEND_DEVELOPMENT',
+    technologies: [
+      { id: 'tech-fastapi', name: 'FASTAPI' },
+      { id: 'tech-nodejs', name: 'NODE_JS' },
+      { id: 'tech-express', name: 'EXPRESS_JS' },
+      { id: 'tech-django', name: 'DJANGO' },
+      { id: 'tech-flask', name: 'FLASK' },
+      { id: 'tech-spring', name: 'SPRING_BOOT' },
+      { id: 'tech-nest', name: 'NEST_JS' },
+      { id: 'tech-laravel', name: 'LARAVEL' },
+      { id: 'tech-graphql', name: 'GRAPHQL' },
+      { id: 'tech-rest', name: 'REST_API' },
+    ],
+  },
+  {
+    id: 'ai-ml',
+    name: 'AI_ML',
+    technologies: [
+      { id: 'tech-numpy', name: 'NUMPY' },
+      { id: 'tech-pandas', name: 'PANDAS' },
+      { id: 'tech-scikit', name: 'SCIKIT_LEARN' },
+      { id: 'tech-tf', name: 'TENSORFLOW' },
+      { id: 'tech-pytorch', name: 'PYTORCH' },
+      { id: 'tech-keras', name: 'KERAS' },
+      { id: 'tech-opencv', name: 'OPENCV' },
+      { id: 'tech-langchain', name: 'LANGCHAIN' },
+      { id: 'tech-huggingface', name: 'HUGGING_FACE' },
+      { id: 'tech-openai', name: 'OPENAI_API' },
+    ],
+  },
+  {
+    id: 'app-dev',
+    name: 'APP_DEVELOPMENT',
+    technologies: [
+      { id: 'tech-flutter', name: 'FLUTTER' },
+      { id: 'tech-reactnative', name: 'REACT_NATIVE' },
+      { id: 'tech-android', name: 'ANDROID' },
+      { id: 'tech-jetpack', name: 'JETPACK_COMPOSE' },
+      { id: 'tech-swiftui', name: 'SWIFT_UI' },
+    ],
+  },
+  {
+    id: 'cloud-comp',
+    name: 'CLOUD_COMPUTING',
+    technologies: [
+      { id: 'tech-aws', name: 'AWS' },
+      { id: 'tech-azure', name: 'AZURE' },
+      { id: 'tech-gcp', name: 'GOOGLE_CLOUD' },
+      { id: 'tech-firebase', name: 'FIREBASE' },
+      { id: 'tech-supabase', name: 'SUPABASE' },
+    ],
+  },
+  {
+    id: 'devops',
+    name: 'DEVOPS',
+    technologies: [
+      { id: 'tech-docker', name: 'DOCKER' },
+      { id: 'tech-k8s', name: 'KUBERNETES' },
+      { id: 'tech-jenkins', name: 'JENKINS' },
+      { id: 'tech-githubactions', name: 'GITHUB_ACTIONS' },
+      { id: 'tech-terraform', name: 'TERRAFORM' },
+      { id: 'tech-ansible', name: 'ANSIBLE' },
+      { id: 'tech-nginx', name: 'NGINX' },
+      { id: 'tech-linux', name: 'LINUX' },
+    ],
+  },
+  {
+    id: 'database',
+    name: 'DATABASE',
+    technologies: [
+      { id: 'tech-postgres', name: 'POSTGRESQL' },
+      { id: 'tech-mysql', name: 'MYSQL' },
+      { id: 'tech-mongodb', name: 'MONGODB' },
+      { id: 'tech-redis', name: 'REDIS' },
+      { id: 'tech-sqlite', name: 'SQLITE' },
+    ],
+  },
+  {
+    id: 'ui-ux',
+    name: 'UI_UX_DESIGN',
+    technologies: [
+      { id: 'tech-figma', name: 'FIGMA' },
+      { id: 'tech-adobexd', name: 'ADOBE_XD' },
+      { id: 'tech-canva', name: 'CANVA' },
+      { id: 'tech-photoshop', name: 'PHOTOSHOP' },
+      { id: 'tech-illustrator', name: 'ILLUSTRATOR' },
+    ],
+  },
+  {
+    id: 'blockchain',
+    name: 'BLOCKCHAIN',
+    technologies: [
+      { id: 'tech-solidity', name: 'SOLIDITY' },
+      { id: 'tech-hardhat', name: 'HARDHAT' },
+      { id: 'tech-foundry', name: 'FOUNDRY' },
+      { id: 'tech-ethers', name: 'ETHERS_JS' },
+      { id: 'tech-web3', name: 'WEB3_JS' },
+    ],
+  },
+  {
+    id: 'iot',
+    name: 'IOT',
+    technologies: [
+      { id: 'tech-esp32', name: 'ESP32' },
+      { id: 'tech-mqtt', name: 'MQTT' },
+    ],
+  },
+  {
+    id: 'robotics',
+    name: 'ROBOTICS',
+    technologies: [
+      { id: 'tech-ros', name: 'ROS' },
+      { id: 'tech-arduino-rob', name: 'ARDUINO' },
+      { id: 'tech-raspi-rob', name: 'RASPBERRY_PI' },
+    ],
+  },
+  {
+    id: 'cyber-sec',
+    name: 'CYBER_SECURITY',
+    technologies: [
+      { id: 'tech-kali', name: 'KALI_LINUX' },
+      { id: 'tech-wireshark', name: 'WIRESHARK' },
+      { id: 'tech-burp', name: 'BURP_SUITE' },
+      { id: 'tech-nmap', name: 'NMAP' },
+      { id: 'tech-metasploit', name: 'METASPLOIT' },
+      { id: 'tech-owasp', name: 'OWASP' },
+    ],
+  },
+];
 
 const activeTab = ref('bounties');
 const searchQuery = ref('');
 const statusFilter = ref('All');
 const selectedBountyApps = ref(null);
 const selectedApplicant = ref(null);
+const assignedWorkData = ref(null);
 const showCreateModal = ref(false);
-const attachInput = ref(null);
+const fileInputRef = ref(null);
+
+const liveBounties = ref([]);
+const availableDomains = ref([...DEFAULT_DOMAINS]);
+const isLoadingBounties = ref(false);
+const isLoadingApplicants = ref(false);
+const isSubmittingBounty = ref(false);
+const isSubmittingWork = ref(false);
+
 const showToast = ref(false);
 const toastMessage = ref('');
 const toastType = ref('success');
-const showConfetti = ref(false);
+
+const currentApplicants = ref([]);
 
 const workForm = reactive({
   taskTitle: '',
   taskDescription: '',
   deliverables: '',
   deadline: '',
-  priority: 'medium',
 });
-
-const allSkills = ['React', 'Vue.js', 'Node.js', 'Python', 'CSS', 'JavaScript', 'TypeScript', 'Figma', 'Solidity', 'MongoDB', 'Docker', 'UI Design', 'Prototyping', 'Responsive Design'];
 
 const bountyForm = reactive({
-  title: '', category: 'Web Development', description: '', skills: [], reward: '', difficulty: 'Medium',
-  deadline: '', duration: '', studentsNeeded: 1, attachments: [],
+  title: '',
+  domain_ids: [DEFAULT_DOMAINS[0].id],
+  description: '',
+  technologies: [],
+  reward: '2500',
+  deadline: '',
+  duration: '2 Weeks',
+  studentsNeeded: 1,
+  image_file: null,
+  image_preview: null,
+  image_url: '',
+  responsibilities: ['Design and implement core features', 'Submit pull request with clean tests'],
 });
 
-const myBounties = computed(() => store.bounties);
-const activeBounties = computed(() => myBounties.value.filter(b => b.status === 'open').length);
-const totalApplicants = computed(() => myBounties.value.reduce((acc, b) => acc + (b.applicantsCount || 0), 0));
-const completedCount = computed(() => store.portfolio.length);
-const openPositions = computed(() => myBounties.value.filter(b => b.status === 'open').length);
+const getToken = () => store.token || localStorage.getItem('driven_token');
+
+// ── Metrics ──
+const activeBountiesCount = computed(() => liveBounties.value.filter(b => b.status === 'open').length);
+const totalApplicantsCount = computed(() => liveBounties.value.reduce((acc, b) => acc + (b.student_seats || 0), 0));
+const completedBountiesCount = computed(() => liveBounties.value.filter(b => b.status === 'completed').length);
+const openSeatsCount = computed(() => liveBounties.value.filter(b => b.status === 'open').reduce((acc, b) => acc + (b.student_seats || 0), 0));
 
 const myBountyList = computed(() => {
-  let result = myBounties.value;
+  let result = liveBounties.value;
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
-    result = result.filter(b => b.title.toLowerCase().includes(q) || b.category.toLowerCase().includes(q));
+    result = result.filter(b => (b.title || '').toLowerCase().includes(q) || (b.description || '').toLowerCase().includes(q));
   }
-  if (statusFilter.value !== 'All') result = result.filter(b => b.status === statusFilter.value);
+  if (statusFilter.value !== 'All') {
+    result = result.filter(b => b.status === statusFilter.value);
+  }
   return result;
 });
 
-const currentApplicants = computed(() => {
-  if (!selectedBountyApps.value) return [];
-  return (store.bountyApplicants[selectedBountyApps.value.id] || []).map(a => ({
-    ...a,
-    matchScore: a.matchScore || Math.floor(60 + Math.random() * 35),
-  }));
+// All technologies belonging to all selected domains
+const selectedDomainTechs = computed(() => {
+  if (!bountyForm.domain_ids.length) return [];
+  const techs = [];
+  const seen = new Set();
+  availableDomains.value.forEach(d => {
+    if (bountyForm.domain_ids.includes(d.id)) {
+      d.technologies?.forEach(t => {
+        if (!seen.has(t.id)) {
+          seen.add(t.id);
+          techs.push(t);
+        }
+      });
+    }
+  });
+  return techs;
 });
 
-const studentSubmission = computed(() => {
-  if (!selectedApplicant.value) return null;
-  const app = selectedApplicant.value;
-  if (!app.submission && !app.submissionStatus) return null;
-  return {
-    status: app.submissionStatus || 'submitted',
-    notes: app.submission?.notes || '',
-    githubLink: app.submission?.github || app.github,
-    demoLink: app.submission?.demo,
+const workProgressLevel = computed(() => {
+  if (!assignedWorkData.value) {
+    if (selectedApplicant.value?.status === 'accepted') return 1;
+    return 0;
+  }
+  if (assignedWorkData.value.status === 'completed') return 4;
+  if (assignedWorkData.value.status === 'in_progress') return 3;
+  if (assignedWorkData.value.status === 'assigned') return 2;
+  return 1;
+});
+
+const workProgressPercent = computed(() => (workProgressLevel.value / 4) * 100);
+
+// ── Lifecycle & Data Loading ──
+onMounted(async () => {
+  await Promise.all([loadBounties(), loadDomains()]);
+});
+
+const loadBounties = async () => {
+  isLoadingBounties.value = true;
+  try {
+    const data = await fetchBountiesApi({}, getToken());
+    liveBounties.value = data;
+  } catch (err) {
+    console.error('Failed to load bounties:', err);
+  } finally {
+    isLoadingBounties.value = false;
+  }
+};
+
+const loadDomains = async () => {
+  try {
+    const data = await fetchDomainsAndTechsApi(getToken());
+    if (data && data.length) {
+      availableDomains.value = data;
+      if (
+        !bountyForm.domain_ids.length ||
+        !availableDomains.value.some(d => d.id === bountyForm.domain_ids[0])
+      ) {
+        bountyForm.domain_ids = [data[0].id];
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load domains from backend, using defaults:', err);
+  }
+};
+
+const openCreateModal = async () => {
+  await loadDomains();
+  if (availableDomains.value.length && (!bountyForm.domain_ids.length || !availableDomains.value.some(d => d.id === bountyForm.domain_ids[0]))) {
+    bountyForm.domain_ids = [availableDomains.value[0].id];
+  }
+  // Default deadline 14 days ahead
+  const defaultDate = new Date();
+  defaultDate.setDate(defaultDate.getDate() + 14);
+  bountyForm.deadline = defaultDate.toISOString().slice(0, 16);
+  if (!bountyForm.responsibilities.length) {
+    bountyForm.responsibilities = ['Design and implement core features', 'Submit pull request with clean tests'];
+  }
+  showCreateModal.value = true;
+};
+
+// ── Multi-domain toggle ──
+const toggleDomain = (domainId) => {
+  const idx = bountyForm.domain_ids.indexOf(domainId);
+  if (idx > -1) {
+    if (bountyForm.domain_ids.length > 1) {
+      bountyForm.domain_ids.splice(idx, 1);
+    }
+  } else {
+    bountyForm.domain_ids.push(domainId);
+  }
+};
+
+const selectAllDomains = () => {
+  bountyForm.domain_ids = availableDomains.value.map(d => d.id);
+};
+
+const clearDomains = () => {
+  if (availableDomains.value.length) {
+    bountyForm.domain_ids = [availableDomains.value[0].id];
+    bountyForm.technologies = [];
+  }
+};
+
+const toggleTech = (techId) => {
+  const idx = bountyForm.technologies.indexOf(techId);
+  if (idx > -1) bountyForm.technologies.splice(idx, 1);
+  else bountyForm.technologies.push(techId);
+};
+
+const selectAllTechs = () => {
+  bountyForm.technologies = selectedDomainTechs.value.map(t => t.id);
+};
+
+// ── Responsibilities Dynamic Inputs ──
+const addResponsibility = () => {
+  bountyForm.responsibilities.push('');
+};
+
+const removeResponsibility = (index) => {
+  if (bountyForm.responsibilities.length > 1) {
+    bountyForm.responsibilities.splice(index, 1);
+  }
+};
+
+// ── Image Upload Handling (Cloudinary) ──
+const handleFileUpload = (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  bountyForm.image_file = file;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    bountyForm.image_preview = ev.target?.result || null;
   };
-});
-
-const progressLevel = (app) => {
-  if (!app) return 0;
-  if (app.submissionStatus === 'approved') return 4;
-  if (app.submissionStatus === 'submitted' || app.progress === 'submitted') return 3;
-  if (app.progress === 'in_progress') return 3;
-  if (app.assignedTaskDescription) return 2;
-  if (app.status === 'accepted' || app.status === 'assigned') return 1;
-  return 0;
+  reader.readAsDataURL(file);
 };
 
-const progressLabel = (app) => {
-  const levels = ['Accepted', 'Work Assigned', 'In Progress', 'Completed'];
-  return levels[Math.min(progressLevel(app), 3)] || 'Accepted';
+const handleFileDrop = (e) => {
+  e.preventDefault();
+  const file = e.dataTransfer?.files?.[0];
+  if (!file) return;
+  bountyForm.image_file = file;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    bountyForm.image_preview = ev.target?.result || null;
+  };
+  reader.readAsDataURL(file);
 };
 
-const progressPercent = (app) => {
-  return (progressLevel(app) / 4) * 100;
+const removeImage = () => {
+  bountyForm.image_file = null;
+  bountyForm.image_preview = null;
+  bountyForm.image_url = '';
+  if (fileInputRef.value) fileInputRef.value.value = '';
 };
 
+const isUUID = (str) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+// ── Publish Bounty ──
+const publishBounty = async () => {
+  console.log('[CampusBountyAdmin] publishBounty clicked with form:', JSON.parse(JSON.stringify(bountyForm)));
+
+  if (!bountyForm.title || !bountyForm.title.trim()) {
+    displayToast('Please enter a Bounty Title.', 'error');
+    return;
+  }
+  if (!bountyForm.domain_ids || !bountyForm.domain_ids.length) {
+    displayToast('Please select at least one Domain / Category.', 'error');
+    return;
+  }
+  if (!bountyForm.description || !bountyForm.description.trim()) {
+    displayToast('Please enter a Bounty Description.', 'error');
+    return;
+  }
+  if (!bountyForm.deadline) {
+    displayToast('Please specify an Application Deadline.', 'error');
+    return;
+  }
+
+  isSubmittingBounty.value = true;
+  try {
+    // 1. Upload cover image to Cloudinary if file provided
+    let imageUrl = bountyForm.image_url || null;
+    if (bountyForm.image_file) {
+      try {
+        imageUrl = await uploadBountyImageApi(bountyForm.image_file, getToken());
+      } catch (err) {
+        console.warn('Cloudinary upload warning:', err);
+      }
+    }
+
+    const validResponsibilities = bountyForm.responsibilities
+      .map(r => (typeof r === 'string' ? r.trim() : ''))
+      .filter(Boolean);
+
+    // 2. Safe parse deadline
+    let deadlineIso = '';
+    const parsedDate = new Date(bountyForm.deadline);
+    if (!isNaN(parsedDate.getTime())) {
+      deadlineIso = parsedDate.toISOString();
+    } else {
+      const fallbackDate = new Date();
+      fallbackDate.setDate(fallbackDate.getDate() + 14);
+      deadlineIso = fallbackDate.toISOString();
+    }
+
+    // 3. Resolve primary domain ID to a real UUID
+    let primaryDomainId = bountyForm.domain_ids[0];
+    let foundDomain = availableDomains.value.find(d => isUUID(d.id) && (d.id === primaryDomainId || d.name === primaryDomainId));
+    if (!foundDomain) {
+      await loadDomains();
+      foundDomain = availableDomains.value.find(d => isUUID(d.id) && (d.id === primaryDomainId || d.name === primaryDomainId)) || availableDomains.value.find(d => isUUID(d.id));
+    }
+    if (foundDomain) {
+      primaryDomainId = foundDomain.id;
+    }
+
+    // 4. Resolve technologies to real UUIDs
+    const validTechIds = bountyForm.technologies
+      .map(tId => {
+        if (isUUID(tId)) return tId;
+        for (const d of availableDomains.value) {
+          const match = d.technologies?.find(t => isUUID(t.id) && (t.id === tId || t.name === tId));
+          if (match) return match.id;
+        }
+        return null;
+      })
+      .filter(Boolean);
+
+    const payload = {
+      title: bountyForm.title.trim(),
+      domain_id: primaryDomainId,
+      description: bountyForm.description.trim(),
+      reward: Number(bountyForm.reward) || 0,
+      application_deadline: deadlineIso,
+      duration: (bountyForm.duration && bountyForm.duration.trim()) || '2 Weeks',
+      student_seats: Math.max(1, Number(bountyForm.studentsNeeded) || 1),
+      image_url: imageUrl,
+      technologies: validTechIds,
+      responsibilities: validResponsibilities.length ? validResponsibilities : ['Active project execution and delivery'],
+    };
+
+    console.log('[CampusBountyAdmin] Submitting create bounty payload:', payload);
+    const token = getToken();
+    const result = await createBountyApi(payload, token);
+    console.log('[CampusBountyAdmin] Bounty created response:', result);
+
+    showCreateModal.value = false;
+    displayToast('Campus Bounty created successfully!', 'success');
+    await loadBounties();
+  } catch (err) {
+    console.error('Failed to create bounty:', err);
+    displayToast(err.message || 'Failed to create bounty.', 'error');
+  } finally {
+    isSubmittingBounty.value = false;
+  }
+};
+
+const handleDeleteBounty = async (bounty) => {
+  if (!confirm(`Are you sure you want to delete "${bounty.title}"?`)) return;
+  try {
+    await deleteBountyApi(bounty.id, getToken());
+    displayToast('Bounty deleted.', 'success');
+    if (selectedBountyApps.value?.id === bounty.id) {
+      selectedBountyApps.value = null;
+      selectedApplicant.value = null;
+    }
+    await loadBounties();
+  } catch (err) {
+    displayToast(err.message || 'Failed to delete bounty.', 'error');
+  }
+};
+
+// ── Select Bounty & Load Applicants ──
+const selectBounty = async (bounty) => {
+  selectedBountyApps.value = bounty;
+  selectedApplicant.value = null;
+  assignedWorkData.value = null;
+  activeTab.value = 'applicants';
+  await loadBountyApplicants(bounty.id);
+};
+
+const loadBountyApplicants = async (bountyId) => {
+  isLoadingApplicants.value = true;
+  try {
+    const apps = await fetchBountyApplicationsApi(bountyId, getToken());
+    currentApplicants.value = apps;
+  } catch (err) {
+    displayToast(err.message || 'Failed to load applicants.', 'error');
+  } finally {
+    isLoadingApplicants.value = false;
+  }
+};
+
+const handleUpdateAppStatus = async (appId, status) => {
+  try {
+    await updateApplicationStatusApi(appId, status, getToken());
+    displayToast(`Application ${status} successfully.`, 'success');
+    if (selectedBountyApps.value) {
+      await loadBountyApplicants(selectedBountyApps.value.id);
+    }
+  } catch (err) {
+    displayToast(err.message || 'Failed to update application status.', 'error');
+  }
+};
+
+// ── Work Assign Tab ──
+const openWorkAssign = async (app) => {
+  selectedApplicant.value = app;
+  activeTab.value = 'workassign';
+  try {
+    const work = await fetchAssignedWorkApi(app.id, getToken());
+    assignedWorkData.value = work;
+  } catch {
+    assignedWorkData.value = null;
+  }
+
+  if (!assignedWorkData.value) {
+    workForm.taskTitle = `Complete ${selectedBountyApps.value?.title || 'Bounty Project'}`;
+    workForm.taskDescription = selectedBountyApps.value?.description || '';
+    workForm.deliverables = (selectedBountyApps.value?.responsibilities || []).map(r => r.title).join('\n');
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    workForm.deadline = d.toISOString().slice(0, 16);
+  }
+};
+
+const handleAssignWork = async () => {
+  if (!workForm.taskTitle.trim() || !workForm.taskDescription.trim() || !workForm.deadline) {
+    displayToast('Please fill in task title, description, and deadline.', 'error');
+    return;
+  }
+
+  isSubmittingWork.value = true;
+  try {
+    const deliverables = workForm.deliverables
+      .split('\n')
+      .map(d => d.trim())
+      .filter(Boolean)
+      .map(title => ({ title }));
+
+    const payload = {
+      title: workForm.taskTitle.trim(),
+      task_description: workForm.taskDescription.trim(),
+      deadline: new Date(workForm.deadline).toISOString(),
+      event_id: null,
+      deliverables: deliverables.length ? deliverables : [{ title: 'Main Project Deliverable' }],
+    };
+
+    const work = await assignWorkApi(selectedApplicant.value.id, payload, getToken());
+    assignedWorkData.value = work;
+    displayToast('Work assigned successfully to student!', 'success');
+  } catch (err) {
+    displayToast(err.message || 'Failed to assign work.', 'error');
+  } finally {
+    isSubmittingWork.value = false;
+  }
+};
+
+const handleUpdateWorkStatus = async (newStatus) => {
+  if (!selectedApplicant.value) return;
+  try {
+    const work = await updateAssignedWorkApi(selectedApplicant.value.id, { status: newStatus }, getToken());
+    assignedWorkData.value = work;
+    displayToast(`Task marked as ${newStatus}.`, 'success');
+  } catch (err) {
+    displayToast(err.message || 'Failed to update work status.', 'error');
+  }
+};
+
+const toggleDeliverableStatus = async (deliverable) => {
+  if (!selectedApplicant.value || !assignedWorkData.value) return;
+  const newStatus = deliverable.status === 'completed' ? 'in_progress' : 'completed';
+  try {
+    const work = await updateAssignedWorkApi(
+      selectedApplicant.value.id,
+      {
+        deliverables: [{ id: deliverable.id, status: newStatus }],
+      },
+      getToken()
+    );
+    assignedWorkData.value = work;
+  } catch (err) {
+    displayToast(err.message || 'Failed to update deliverable.', 'error');
+  }
+};
+
+// ── Tab navigation ──
 const goToApplicantsTab = () => {
   if (selectedBountyApps.value) activeTab.value = 'applicants';
 };
@@ -460,195 +1112,29 @@ const goToWorkAssignTab = () => {
   if (selectedBountyApps.value) activeTab.value = 'workassign';
 };
 
-const openWorkAssign = (app) => {
-  selectedApplicant.value = app;
-  activeTab.value = 'workassign';
+// ── Helpers ──
+const formatDomainName = (name) => {
+  if (!name) return 'General';
+  return String(name).replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
 };
 
-const selectBounty = (bounty) => {
-  selectedBountyApps.value = bounty;
-  selectedApplicant.value = null;
-  const existing = store.bountyApplicants[bounty.id] || [];
-  const existingStatus = {};
-  existing.forEach(a => { existingStatus[a.id] = a.status; });
-  const realApps = store.myApplications.filter(a => a.bountyId === bounty.id);
-  if (realApps.length) {
-    store.bountyApplicants[bounty.id] = realApps.map(a => ({
-      id: a.id, name: store.studentProfile.fullName, department: store.studentProfile.department,
-      why: a.why, github: a.github || '', portfolio: a.portfolio || '',
-      resume: a.resume || null, availability: a.availability || 'N/A',
-      completedBounties: store.portfolio.filter(p => p.clubName === bounty.clubName).length,
-      matchScore: Math.floor(60 + Math.random() * 35),
-      status: existingStatus[a.id] || a.status || 'pending',
-      progress: a.progress || null,
-      assignedTask: a.assignedTask || null,
-      assignedTaskDescription: a.assignedTaskDescription || null,
-      deliverablesList: a.deliverablesList || null,
-      assignedDeadline: a.assignedDeadline || null,
-      assignedPriority: a.assignedPriority || null,
-      checklist: a.checklist || null,
-      submissionStatus: a.submissionStatus || null,
-      submission: a.submission || null,
-    }));
-  } else {
-    store.bountyApplicants[bounty.id] = [];
-  }
-  activeTab.value = 'applicants';
+const formatDept = (dept) => {
+  if (!dept) return 'Engineering';
+  return String(dept).replace(/_/g, ' ').toUpperCase();
 };
 
-const updateAppStatus = (appId, status) => {
-  const apps = store.bountyApplicants[selectedBountyApps.value?.id];
-  if (!apps) return;
-  const app = apps.find(a => a.id === appId);
-  if (app) {
-    app.status = status;
-    if (status === 'accepted') app.progress = 'accepted';
-  }
-  const myApp = store.myApplications.find(a => a.id === appId);
-  if (myApp) myApp.status = status;
-  if (status === 'accepted') {
-    const bounty = selectedBountyApps.value;
-    if (bounty) {
-      store.volunteerApplications.unshift({
-        id: Date.now(), eventId: bounty.id, status: 'accepted',
-        eventName: bounty.title, clubName: bounty.clubName || 'Club',
-        date: bounty.deadline || 'TBD', venue: 'Online',
-        image: bounty.image || '', role: 'Bounty Contributor',
-        assignedTask: bounty.title, taskDescription: bounty.description || '',
-        assignedBy: 'Club Admin', reportingTime: 'Flexible', volunteerLead: 'Club Admin',
-        priority: 'medium', completionDate: null, thankYouMessage: null, feedback: null,
-        checklist: [
-          { id: 1, label: 'Review bounty requirements', completed: false },
-          { id: 2, label: 'Complete deliverables', completed: false },
-          { id: 3, label: 'Submit work for review', completed: false },
-        ],
-        dressCode: 'Casual',
-        notes: `You have been accepted for "${bounty.title}". Complete the work and submit it for approval.`,
-      });
-    }
-  }
-  showToastMessage(`Application ${status === 'accepted' ? 'accepted' : 'rejected'}`, 'success');
+const formatDisplayDate = (d) => {
+  if (!d) return 'TBD';
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-const assignWork = () => {
-  if (!workForm.taskTitle || !workForm.taskDescription) return;
-  const app = selectedApplicant.value;
-  if (!app) return;
-  const deliverables = workForm.deliverables.split('\n').filter(d => d.trim());
-  app.assignedTask = workForm.taskTitle;
-  app.assignedTaskDescription = workForm.taskDescription;
-  app.deliverablesList = deliverables;
-  app.assignedDeadline = workForm.deadline || 'TBD';
-  app.assignedPriority = workForm.priority;
-  app.status = 'assigned';
-  app.progress = 'assigned';
-  app.checklist = [
-    { id: 1, label: 'Review assigned work', completed: false },
-    { id: 2, label: 'Complete deliverables', completed: false },
-    { id: 3, label: 'Submit work for review', completed: false },
-  ];
-  const apps = store.bountyApplicants[selectedBountyApps.value.id];
-  const storeApp = apps?.find(a => a.id === app.id);
-  if (storeApp) {
-    storeApp.assignedTask = workForm.taskTitle;
-    storeApp.assignedTaskDescription = workForm.taskDescription;
-    storeApp.deliverablesList = deliverables;
-    storeApp.assignedDeadline = workForm.deadline || 'TBD';
-    storeApp.assignedPriority = workForm.priority;
-    storeApp.status = 'assigned';
-    storeApp.progress = 'assigned';
-    storeApp.checklist = [...app.checklist];
-  }
-  const volApp = store.volunteerApplications.find(v => v.eventName === selectedBountyApps.value?.title && v.status === 'accepted');
-  if (volApp) {
-    volApp.assignedTask = workForm.taskTitle;
-    volApp.taskDescription = workForm.taskDescription;
-    volApp.checklist = [...app.checklist];
-    volApp.notes = `Assigned work: ${workForm.taskTitle}. Deadline: ${workForm.deadline || 'TBD'}`;
-  }
-  workForm.taskTitle = '';
-  workForm.taskDescription = '';
-  workForm.deliverables = '';
-  workForm.deadline = '';
-  workForm.priority = 'medium';
-  showToastMessage('Work assigned successfully!', 'success');
+const getInitials = (name) => {
+  if (!name) return 'S';
+  const parts = name.trim().split(/\s+/);
+  return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
 };
 
-const requestChanges = (app) => {
-  app.submissionStatus = 'changes_requested';
-  app.progress = 'in_progress';
-  const apps = store.bountyApplicants[selectedBountyApps.value?.id];
-  const storeApp = apps?.find(a => a.id === app.id);
-  if (storeApp) { storeApp.submissionStatus = 'changes_requested'; storeApp.progress = 'in_progress'; }
-  showToastMessage('Changes requested', 'success');
-};
-
-const approveSubmission = (app) => {
-  app.submissionStatus = 'approved';
-  app.progress = 'completed';
-  showConfetti.value = true;
-  setTimeout(() => { showConfetti.value = false; }, 4000);
-  const bountyTitle = selectedBountyApps.value?.title || 'Bounty Project';
-  store.portfolio.push({
-    id: Date.now(), title: app.name + "'s Work", project: bountyTitle,
-    clubName: 'Your Club', verified: true, duration: new Date().toLocaleString('en-US', { month: 'short', year: 'numeric' }),
-    description: 'Completed bounty project with excellence.',
-    skills: selectedBountyApps.value?.skills || [], badge: 'Completed', certificateUrl: '#',
-  });
-  const volApp = store.volunteerApplications.find(v => v.eventName === bountyTitle && v.status === 'accepted');
-  if (volApp) {
-    volApp.status = 'completed';
-    volApp.completionDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    volApp.thankYouMessage = 'Your work has been approved! A portfolio entry and certificate have been generated.';
-    volApp.checklist.forEach(item => { item.completed = true; });
-  }
-  const apps = store.bountyApplicants[selectedBountyApps.value?.id];
-  const storeApp = apps?.find(a => a.id === app.id);
-  if (storeApp) { storeApp.submissionStatus = 'approved'; storeApp.progress = 'completed'; }
-  const myApp = store.myApplications.find(a => a.bountyId === selectedBountyApps.value?.id);
-  if (myApp) myApp.status = 'completed';
-  showToastMessage('Submission approved! Portfolio entry & certificate generated!', 'confetti');
-};
-
-const toggleSkill = (skill) => {
-  const idx = bountyForm.skills.indexOf(skill);
-  if (idx >= 0) bountyForm.skills.splice(idx, 1);
-  else bountyForm.skills.push(skill);
-};
-
-const handleAttachments = (e) => {
-  bountyForm.attachments = Array.from(e.target.files || []);
-};
-
-const saveDraft = () => {
-  showCreateModal.value = false;
-  showToastMessage('Draft saved', 'success');
-};
-
-const publishBounty = () => {
-  if (!bountyForm.title || !bountyForm.description) return;
-  const club = { name: 'Your Club', logo: 'YC', color: '#818cf8' };
-  const newBounty = {
-    id: Date.now(), title: bountyForm.title, clubName: club.name, clubLogo: club.logo, clubColor: club.color,
-    description: bountyForm.description, fullDescription: bountyForm.description, responsibilities: [],
-    category: bountyForm.category, skills: [...bountyForm.skills], reward: bountyForm.reward || 'TBD',
-    deadline: bountyForm.deadline || 'TBD', duration: bountyForm.duration || 'TBD',
-    deliverables: [], difficulty: bountyForm.difficulty, applicantsCount: 0, timePosted: 'Just now',
-    clubEmail: 'club@university.edu', status: 'open',
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=400&fit=crop',
-  };
-  store.bounties.unshift(newBounty);
-  showCreateModal.value = false;
-  Object.assign(bountyForm, { title: '', category: 'Web Development', description: '', skills: [], reward: '', difficulty: 'Medium', deadline: '', duration: '', studentsNeeded: 1, attachments: [] });
-  showToastMessage('Bounty published successfully!', 'success');
-};
-
-const openUrl = (url) => {
-  if (url && !url.startsWith('http')) url = 'https://' + url;
-  if (url) window.open(url, '_blank');
-};
-
-const showToastMessage = (msg, type) => {
+const displayToast = (msg, type = 'success') => {
   toastMessage.value = msg;
   toastType.value = type;
   showToast.value = true;
@@ -662,6 +1148,7 @@ const showToastMessage = (msg, type) => {
   z-index: 1;
   padding-bottom: 3rem;
 }
+
 .cba-hero {
   position: relative;
   margin-bottom: 2rem;
@@ -671,16 +1158,16 @@ const showToastMessage = (msg, type) => {
 .cba-hero-bg {
   position: absolute;
   inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 500px 350px at 78% 50%, rgba(129,140,248,0.07) 0%, transparent 65%),
-    radial-gradient(ellipse 250px 250px at 65% 90%, rgba(99,102,241,0.04) 0%, transparent 70%);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.04) 0%, rgba(15, 23, 42, 0.4) 100%);
+  border-radius: 20px;
 }
 .cba-hero-glow {
   position: absolute;
-  top: -30%; right: -10%;
-  width: 500px; height: 500px;
-  background: radial-gradient(circle, rgba(129,140,248,0.08) 0%, transparent 70%);
+  top: -20%;
+  right: -5%;
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(129, 140, 248, 0.08) 0%, transparent 70%);
   filter: blur(80px);
   pointer-events: none;
 }
@@ -691,494 +1178,478 @@ const showToastMessage = (msg, type) => {
   position: relative;
   z-index: 1;
 }
-.cba-hero-left { flex: 1; min-width: 0; }
+.cba-hero-left {
+  flex: 1;
+  min-width: 0;
+}
 .cba-hero-badge {
   display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   padding: 0.3rem 0.8rem;
   border-radius: 999px;
-  background: rgba(129,140,248,0.1);
-  border: 1px solid rgba(129,140,248,0.15);
-  color: #a5b4fc;
-  font-size: 0.72rem;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.3px;
-  margin-bottom: 0.75rem;
+  color: #818cf8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.85rem;
 }
 .cba-hero-title {
   font-size: 2.2rem;
-  font-weight: 800;
+  font-weight: 900;
   color: #f1f5f9;
-  letter-spacing: -0.8px;
-  margin: 0 0 0.75rem;
-  line-height: 1.15;
+  margin: 0 0 0.6rem;
+  letter-spacing: -0.5px;
 }
 .cba-hero-text {
   font-size: 0.95rem;
-  color: #64748b;
-  margin: 0 0 1.5rem;
-  max-width: 520px;
-  line-height: 1.6;
-}
-.cba-btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.7rem 1.5rem;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
-  font-size: 0.88rem;
-  font-weight: 700;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  box-shadow: 0 4px 20px rgba(99,102,241,0.35);
-  transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
-  font-family: inherit;
-  white-space: nowrap;
-}
-.cba-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(99,102,241,0.5); }
-.cba-btn-primary.sm { padding: 0.5rem 1.1rem; font-size: 0.8rem; }
-.cba-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.cba-btn-glass {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.65rem 1.3rem;
-  background: rgba(255,255,255,0.06);
-  color: #e2e8f0;
-  font-size: 0.82rem;
-  font-weight: 600;
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-.cba-btn-glass:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); transform: translateY(-1px); }
-.cba-btn-outline {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.45rem 0.9rem;
-  background: transparent;
   color: #94a3b8;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border: 1.5px solid rgba(255,255,255,0.08);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
+  line-height: 1.6;
+  margin: 0 0 1.5rem;
 }
-.cba-btn-outline:hover { border-color: rgba(129,140,248,0.3); color: #a5b4fc; }
-.cba-hero-right { flex-shrink: 0; }
-.cba-stat-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  min-width: 360px;
-}
-.cba-stat-card {
-  background: rgba(15,23,42,0.5);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 16px;
-  padding: 0.85rem 1rem;
-  backdrop-filter: blur(14px);
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  transition: all 0.3s;
-}
-.cba-stat-card:hover { border-color: rgba(129,140,248,0.15); transform: translateY(-2px); }
-.cba-stat-icon {
-  width: 40px; height: 40px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
+.cba-hero-right {
   flex-shrink: 0;
 }
-.cba-stat-icon.purple { background: rgba(129,140,248,0.15); color: #818cf8; }
-.cba-stat-icon.blue { background: rgba(96,165,250,0.15); color: #60a5fa; }
-.cba-stat-icon.green { background: rgba(52,211,153,0.15); color: #34d399; }
-.cba-stat-icon.amber { background: rgba(251,191,36,0.15); color: #fbbf24; }
-.cba-stat-body { min-width: 0; }
-.cba-stat-value { display: block; font-size: 1.3rem; font-weight: 700; color: #f1f5f9; line-height: 1.1; }
-.cba-stat-label { font-size: 0.68rem; color: #64748b; font-weight: 500; }
-.cba-tabs {
+
+.cba-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+.cba-stat-card {
   display: flex;
-  gap: 0.35rem;
-  margin-bottom: 1.5rem;
-  padding: 0.35rem;
-  background: rgba(15,23,42,0.3);
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.04);
-  width: fit-content;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  min-width: 170px;
 }
-.cba-tab {
-  padding: 0.5rem 1.1rem;
-  border-radius: 10px;
-  border: none;
-  background: transparent;
-  color: #64748b;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
-  white-space: nowrap;
-  position: relative;
-}
-.cba-tab:hover { color: #cbd5e1; background: rgba(255,255,255,0.04); }
-.cba-tab.active { background: rgba(129,140,248,0.12); color: #a5b4fc; }
-.cba-tab.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
-.cba-tab-count {
-  display: inline-flex;
+.cba-stat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  background: rgba(129,140,248,0.15);
-  color: #818cf8;
-  font-size: 0.6rem;
-  font-weight: 700;
-  padding: 0 4px;
-  margin-left: 4px;
+  font-size: 1.15rem;
+  flex-shrink: 0;
 }
+.cba-stat-icon.purple { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+.cba-stat-icon.blue { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.cba-stat-icon.green { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+.cba-stat-icon.amber { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+
+.cba-stat-body {
+  display: flex;
+  flex-direction: column;
+}
+.cba-stat-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  line-height: 1.2;
+}
+.cba-stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+/* Tabs */
+.cba-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.5rem;
+}
+.cba-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.65rem 1.2rem;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cba-tab:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.04);
+}
+.cba-tab.active {
+  color: #ffffff;
+  background: rgba(99, 102, 241, 0.18);
+  border-color: rgba(129, 140, 248, 0.35);
+}
+.cba-tab.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.cba-tab-count {
+  background: #6366f1;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  margin-left: 0.5rem;
+}
+
+/* Toolbar */
 .cba-toolbar {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
 }
 .cba-search-wrap {
   position: relative;
-  display: flex;
-  align-items: center;
-  background: rgba(15,23,42,0.5);
-  border: 1.5px solid rgba(255,255,255,0.06);
-  border-radius: 10px;
-  padding: 0 0.75rem;
-  min-width: 220px;
   flex: 1;
+  min-width: 220px;
 }
-.cba-search-wrap:focus-within { border-color: rgba(129,140,248,0.3); }
-.cba-search-wrap i { font-size: 0.75rem; color: #475569; }
+.cba-search-wrap i {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  font-size: 0.88rem;
+}
 .cba-search-wrap input {
-  background: transparent; border: none; outline: none; color: rgba(255,255,255,0.95);
-  font-size: 0.8rem; font-family: inherit; padding: 0.55rem 0.5rem; width: 100%;
-}
-.cba-search-wrap input::placeholder { color: rgba(255,255,255,0.5); }
-.cba-filter-select {
-  appearance: none;
-  background: rgba(15,23,42,0.5);
-  border: 1.5px solid rgba(255,255,255,0.06);
+  width: 100%;
+  padding: 0.65rem 0.9rem 0.65rem 2.4rem;
   border-radius: 10px;
-  color: #94a3b8;
-  font-size: 0.75rem;
-  font-family: inherit;
-  padding: 0.5rem 2rem 0.5rem 0.75rem;
-  cursor: pointer;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+  font-size: 0.88rem;
   outline: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='%23475569'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.5rem center;
 }
+.cba-filter-select {
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+  font-size: 0.88rem;
+  outline: none;
+}
+.cba-filter-select option {
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
+
+/* Bounty Rows */
 .cba-bounty-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 .cba-bounty-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  background: rgba(15,23,42,0.4);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 14px;
-  padding: 1rem 1.15rem;
+  gap: 1.25rem;
+  padding: 1.15rem 1.35rem;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(12px);
 }
-.cba-bounty-row:hover { border-color: rgba(129,140,248,0.15); transform: translateX(3px); }
-.cba-bounty-row.active { border-color: rgba(129,140,248,0.3); background: rgba(129,140,248,0.06); }
-.cba-bounty-img {
-  width: 60px; height: 60px;
-  border-radius: 10px;
-  background-size: cover;
-  background-position: center;
+.cba-bounty-row:hover {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(129, 140, 248, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.cba-bounty-row.active {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+}
+.cba-bounty-icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: #818cf8;
   flex-shrink: 0;
 }
-.cba-bounty-info { flex: 1; min-width: 0; }
-.cba-bounty-info h4 {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #f1f5f9;
-  margin: 0 0 0.2rem;
+.cba-bounty-info {
+  flex: 1;
+  min-width: 0;
 }
 .cba-bounty-cat {
-  font-size: 0.7rem;
-  color: #818cf8;
-  font-weight: 600;
-  margin-bottom: 0.3rem;
-  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  color: #c7d2fe;
+}
+.cba-bounty-desc-preview {
+  font-size: 0.84rem;
+  color: #94a3b8;
+  margin: 0 0 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .cba-bounty-meta {
   display: flex;
-  gap: 0.75rem;
-  font-size: 0.7rem;
-  color: #64748b;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  flex-wrap: wrap;
 }
-.cba-bounty-meta span { display: flex; align-items: center; gap: 0.25rem; }
-.cba-bounty-meta span i { font-size: 0.65rem; color: #475569; }
 .cba-bounty-status {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.4rem;
   flex-shrink: 0;
 }
 .cba-status-badge {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
-.cba-status-badge.open { background: rgba(52,211,153,0.12); color: #34d399; }
-.cba-status-badge.closed { background: rgba(244,63,94,0.12); color: #fb7185; }
-.cba-status-badge.draft { background: rgba(251,191,36,0.12); color: #fbbf24; }
+.cba-status-badge.open { background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+.cba-status-badge.in_progress { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
+.cba-status-badge.completed { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); }
+.cba-status-badge.closed { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
+
 .cba-bounty-apps-btn {
-  font-size: 0.7rem;
-  color: #818cf8;
-  font-weight: 600;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(129, 140, 248, 0.3);
+  border-radius: 8px;
+  padding: 0.35rem 0.75rem;
+  color: #c7d2fe;
+  font-size: 0.78rem;
+  font-weight: 700;
   cursor: pointer;
+  transition: all 0.15s;
+}
+.cba-bounty-apps-btn:hover {
+  background: rgba(99, 102, 241, 0.3);
+  color: #ffffff;
+}
+
+.cba-btn-delete-sm {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
-  transition: all 0.2s;
+  justify-content: center;
+  color: #ef4444;
+  cursor: pointer;
+  transition: all 0.15s;
 }
-.cba-bounty-apps-btn:hover { color: #a5b4fc; }
+.cba-btn-delete-sm:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.3);
+  color: #ffffff;
+}
+.cba-btn-delete-sm:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Applicants list */
 .cba-apps-header {
   display: flex;
   align-items: center;
   gap: 1rem;
   margin-bottom: 1.5rem;
-}
-.cba-back-btn {
-  padding: 0.4rem 0.85rem;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.04);
-  color: #94a3b8;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
-  display: flex;
-  align-items: center;
-}
-.cba-back-btn:hover { background: rgba(255,255,255,0.08); color: #e2e8f0; }
-.cba-apps-header h3 {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  margin: 0;
-  flex: 1;
+  flex-wrap: wrap;
 }
 .cba-apps-count {
-  font-size: 0.78rem;
-  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #818cf8;
 }
-.cba-apps-prompt {
-  text-align: center;
-  padding: 4rem 2rem;
-  background: rgba(15,23,42,0.3);
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,0.04);
-}
-.cba-apps-prompt i { font-size: 2.5rem; color: #475569; margin-bottom: 1rem; display: block; }
-.cba-apps-prompt h3 { font-size: 1rem; font-weight: 700; color: #94a3b8; margin: 0 0 0.4rem; }
-.cba-apps-prompt p { font-size: 0.82rem; color: #475569; margin: 0; }
-
-/* Applicant List */
 .cba-apps-list {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.85rem;
 }
 .cba-applicant-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  background: rgba(15,23,42,0.4);
-  border: 1px solid rgba(255,255,255,0.05);
+  gap: 1.25rem;
+  padding: 1.1rem 1.25rem;
   border-radius: 14px;
-  padding: 0.9rem 1.1rem;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
   transition: all 0.2s;
 }
-.cba-applicant-row:hover { border-color: rgba(129,140,248,0.15); background: rgba(129,140,248,0.04); }
-.cba-applicant-row.rejected { opacity: 0.5; }
+.cba-applicant-row:hover {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(129, 140, 248, 0.3);
+}
 .cba-applicant-avatar {
-  width: 40px; height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 0.75rem;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: #ffffff;
   flex-shrink: 0;
 }
-.cba-applicant-avatar.green { background: linear-gradient(135deg, #059669, #10b981); }
-.cba-applicant-avatar.yellow { background: linear-gradient(135deg, #d97706, #f59e0b); }
-.cba-applicant-info { flex: 1; min-width: 0; }
+.cba-applicant-avatar.yellow { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.cba-applicant-avatar.green { background: linear-gradient(135deg, #10b981, #059669); }
+.cba-applicant-avatar.red { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+.cba-applicant-info {
+  flex: 1;
+  min-width: 0;
+}
 .cba-applicant-info h5 {
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
   color: #f1f5f9;
-  margin: 0 0 0.1rem;
+  margin: 0 0 0.2rem;
 }
 .cba-app-dept {
-  font-size: 0.7rem;
-  color: #64748b;
+  font-size: 0.78rem;
+  color: #94a3b8;
 }
 .cba-app-status-badge {
-  font-size: 0.6rem;
-  font-weight: 700;
-  padding: 0.2rem 0.5rem;
-  border-radius: 999px;
-  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  text-transform: uppercase;
 }
-.cba-app-status-badge.pending { background: rgba(251,191,36,0.12); color: #fbbf24; }
-.cba-app-status-badge.accepted { background: rgba(52,211,153,0.12); color: #34d399; }
-.cba-app-status-badge.assigned { background: rgba(129,140,248,0.12); color: #818cf8; }
-.cba-app-status-badge.rejected { background: rgba(244,63,94,0.12); color: #fb7185; }
-.cba-app-progress-compact {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.2rem;
-  min-width: 120px;
-}
-.cba-compact-bar {
-  width: 100%;
-  height: 4px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 2px;
-  overflow: hidden;
-}
-.cba-compact-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #6366f1, #34d399);
-  border-radius: 2px;
-  transition: width 0.5s ease;
-}
-.cba-compact-label {
-  font-size: 0.6rem;
-  font-weight: 600;
-  color: #64748b;
-}
+.cba-app-status-badge.pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.cba-app-status-badge.accepted { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+.cba-app-status-badge.rejected { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
 .cba-app-actions {
   display: flex;
-  gap: 0.35rem;
+  align-items: center;
+  gap: 0.5rem;
   flex-shrink: 0;
 }
-.cba-btn-accept.sm, .cba-btn-reject.sm {
-  padding: 0.35rem 0.6rem;
-  font-size: 0.65rem;
-  border-radius: 6px;
-}
-.cba-btn-assign.sm {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.35rem 0.7rem;
-  font-size: 0.65rem;
-  font-weight: 600;
-  font-family: inherit;
-  border: 1.5px solid rgba(129,140,248,0.2);
-  background: rgba(129,140,248,0.08);
-  color: #818cf8;
-  border-radius: 6px;
+.cba-btn-reject {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
   cursor: pointer;
-  transition: all 0.2s;
 }
-.cba-btn-assign.sm:hover { background: rgba(129,140,248,0.15); border-color: rgba(129,140,248,0.3); }
+.cba-btn-reject:hover { background: rgba(239, 68, 68, 0.3); }
+.cba-btn-accept {
+  background: rgba(52, 211, 153, 0.15);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  color: #34d399;
+  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cba-btn-accept:hover { background: rgba(52, 211, 153, 0.3); }
+.cba-btn-assign {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(129, 140, 248, 0.3);
+  color: #c7d2fe;
+  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cba-btn-assign:hover { background: rgba(99, 102, 241, 0.3); color: #ffffff; }
 
-/* Work Assign Tab */
-.cba-workassign-section {
-  min-height: 300px;
+/* Work Assign Layout */
+.cba-workassign-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 .cwa-main {
-  max-width: 780px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 1.5rem;
+  backdrop-filter: blur(12px);
 }
 .cwa-header {
   display: flex;
   align-items: center;
   gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-}
-.cwa-header-info {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  flex: 1;
 }
 .cwa-header-avatar {
-  width: 42px; height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
+  background: linear-gradient(135deg, #6366f1, #3b82f6);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 0.8rem;
-  flex-shrink: 0;
-}
-.cwa-header-info h4 {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  margin: 0 0 0.1rem;
-}
-.cwa-header-info > div > span {
-  font-size: 0.72rem;
-  color: #64748b;
+  font-weight: 800;
+  color: #ffffff;
 }
 .cba-work-status-badge {
-  font-size: 0.6rem;
-  font-weight: 700;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  white-space: nowrap;
-  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.25rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(99, 102, 241, 0.2);
+  color: #c7d2fe;
+  border: 1px solid rgba(129, 140, 248, 0.3);
 }
-.cba-work-status-badge.accepted,
-.cba-work-status-badge.accepted { background: rgba(52,211,153,0.12); color: #34d399; }
-.cba-work-status-badge.assigned,
-.cba-work-status-badge.assigned { background: rgba(129,140,248,0.12); color: #818cf8; }
-.cba-work-status-badge.in_progress,
-.cba-work-status-badge.in_progress { background: rgba(251,191,36,0.12); color: #fbbf24; }
+
 /* Progress Section */
 .cwa-progress-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
 }
 .cwa-progress-track {
-  height: 5px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 3px;
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
   overflow: hidden;
-  margin-bottom: 0.6rem;
+  margin-bottom: 1rem;
 }
 .cwa-progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #6366f1, #34d399);
-  border-radius: 3px;
-  transition: width 0.5s ease;
+  transition: width 0.3s ease;
 }
 .cwa-progress-steps {
   display: flex;
@@ -1186,466 +1657,430 @@ const showToastMessage = (msg, type) => {
 }
 .cwa-step {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
-  font-size: 0.6rem;
-  font-weight: 600;
-  color: #475569;
-  transition: color 0.3s;
-}
-.cwa-step i { font-size: 0.85rem; }
-.cwa-step.active { color: #a5b4fc; }
-.cwa-step.active i { color: #818cf8; }
-.cwa-step span { white-space: nowrap; }
-/* Form */
-.cwa-form-card {
-  background: rgba(15,23,42,0.4);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 16px;
-  padding: 1.25rem;
-}
-.cwa-form-card h5 {
-  font-size: 0.88rem;
+  gap: 0.4rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  color: #e2e8f0;
-  margin: 0 0 1rem;
+  color: #64748b;
 }
-.cba-form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+.cwa-step.active {
+  color: #34d399;
 }
-.cba-form-group {
-  margin-bottom: 0.75rem;
-}
-.cba-form-group label {
-  display: block;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: rgba(255,255,255,0.92);
-  margin-bottom: 0.3rem;
-}
-.cba-input {
-  width: 100%;
-  padding: 0.55rem 0.75rem;
-  background: rgba(15,23,42,0.6);
-  border: 1.5px solid rgba(255,255,255,0.07);
-  border-radius: 10px;
-  color: rgba(255,255,255,0.95);
-  font-size: 0.8rem;
-  font-family: inherit;
-  outline: none;
-  transition: all 0.2s;
-  box-sizing: border-box;
-}
-.cba-input:focus { border-color: rgba(129,140,248,0.35); box-shadow: 0 0 0 3px rgba(129,140,248,0.06); }
-.cba-input::placeholder { color: rgba(255,255,255,0.5); }
-.cba-input option { background: #111827; color: #e2e8f0; }
-.cba-textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 
-/* Assigned View */
-.cwa-assigned-section {}
-.cwa-assigned-card {
-  background: rgba(15,23,42,0.4);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 16px;
+/* Form & Assigned Cards */
+.cwa-form-card, .cwa-assigned-card, .cwa-checklist-card, .cwa-mark-card {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
   padding: 1.25rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 .cwa-assigned-title {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  margin-bottom: 0.85rem;
-}
-.cwa-assigned-title i { color: #818cf8; font-size: 1rem; }
-.cwa-assigned-title h5 {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  margin: 0;
-  flex: 1;
-}
-.cba-priority-badge {
-  font-size: 0.6rem;
-  font-weight: 700;
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-}
-.cba-priority-badge.low { background: rgba(52,211,153,0.1); color: #34d399; }
-.cba-priority-badge.medium { background: rgba(251,191,36,0.1); color: #fbbf24; }
-.cba-priority-badge.high { background: rgba(244,63,94,0.1); color: #fb7185; }
-.cwa-assigned-desc { margin-bottom: 0.75rem; }
-.cwa-assigned-desc strong, .cwa-assigned-deli strong {
-  display: block;
-  font-size: 0.7rem;
-  color: #94a3b8;
-  margin-bottom: 0.3rem;
-  font-weight: 600;
-}
-.cwa-assigned-desc p {
-  font-size: 0.78rem;
-  color: #64748b;
-  margin: 0;
-  line-height: 1.5;
-}
-.cwa-assigned-deli { margin-bottom: 0.75rem; }
-.cwa-assigned-deli ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.cwa-assigned-deli li {
-  font-size: 0.75rem;
-  color: #64748b;
-  padding: 0.2rem 0;
-  padding-left: 1rem;
-  position: relative;
-}
-.cwa-assigned-deli li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.5rem;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #818cf8;
-}
-.cwa-assigned-meta {
-  font-size: 0.7rem;
-  color: #64748b;
-}
-.cwa-assigned-meta span { display: flex; align-items: center; gap: 0.3rem; }
-/* Checklist */
-.cwa-checklist-card {
-  background: rgba(15,23,42,0.4);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 16px;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
-}
-.cwa-checklist-card h5 {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #e2e8f0;
-  margin: 0 0 0.65rem;
 }
 .cwa-checklist {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
 }
 .cwa-check-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: #64748b;
-  padding: 0.35rem 0.5rem;
-  border-radius: 6px;
-  background: rgba(255,255,255,0.02);
-}
-.cwa-check-item i { font-size: 0.75rem; color: #475569; }
-.cwa-check-item.done { color: #34d399; }
-.cwa-check-item.done i { color: #34d399; }
-/* Submission */
-.cwa-submission-card {
-  background: rgba(15,23,42,0.4);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 16px;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
-}
-.cwa-submission-card h5 {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #e2e8f0;
-  margin: 0 0 0.65rem;
-}
-.cwa-sub-notes {
-  font-size: 0.78rem;
-  color: #64748b;
-  margin: 0 0 0.65rem;
-  line-height: 1.5;
-}
-.cba-sub-links {
-  display: flex;
-  gap: 0.4rem;
-  margin-bottom: 0.75rem;
-  flex-wrap: wrap;
-}
-.cba-link-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.3rem 0.6rem;
-  border-radius: 6px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
-  color: #94a3b8;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-  font-family: inherit;
-}
-.cba-link-btn:hover { background: rgba(129,140,248,0.08); border-color: rgba(129,140,248,0.15); color: #a5b4fc; }
-.cwa-sub-actions {
-  display: flex;
-  gap: 0.5rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(255,255,255,0.04);
-}
-.cba-btn-accept {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.4rem 0.9rem;
-  border-radius: 8px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  font-family: inherit;
-  border: none;
-  background: linear-gradient(135deg, #059669, #10b981);
-  color: #fff;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.cba-btn-accept:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(5,150,105,0.3); }
-.cba-btn-reject {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.4rem 0.9rem;
-  border-radius: 8px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  font-family: inherit;
-  border: 1px solid rgba(244,63,94,0.2);
-  background: rgba(244,63,94,0.08);
-  color: #fb7185;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.cba-btn-reject:hover { background: rgba(244,63,94,0.15); }
-.cwa-approved-banner {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 0.85rem;
-  border-radius: 8px;
-  background: rgba(52,211,153,0.08);
-  border: 1px solid rgba(52,211,153,0.1);
-  color: #34d399;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-.cwa-changes-banner {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 0.85rem;
-  border-radius: 8px;
-  background: rgba(251,191,36,0.08);
-  border: 1px solid rgba(251,191,36,0.1);
-  color: #fbbf24;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-.cwa-no-submission {
-  text-align: center;
-  padding: 2rem;
-  background: rgba(15,23,42,0.3);
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.04);
-}
-.cwa-no-submission i { font-size: 1.8rem; color: #475569; margin-bottom: 0.5rem; display: block; }
-.cwa-no-submission p { font-size: 0.8rem; color: #64748b; margin: 0; }
-
-/* Create Bounty Modal */
-.cba-modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  animation: cbaFadeIn 0.2s ease;
-}
-.cba-modal {
-  background: rgba(15,23,42,0.96);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 20px;
-  width: 100%;
-  max-width: 520px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
-  animation: cbaSlideUp 0.3s cubic-bezier(0.16,1,0.3,1);
-}
-.cba-modal-wide { max-width: 640px; }
-.cba-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-}
-.cba-modal-header h3 { font-size: 1.05rem; font-weight: 700; color: #f1f5f9; margin: 0; }
-.cba-modal-close {
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  border: none;
-  background: rgba(255,255,255,0.05);
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.75rem;
-}
-.cba-modal-close:hover { background: rgba(244,63,94,0.15); color: #fb7185; }
-.cba-modal-body { padding: 1.5rem; }
-.cba-modal-footer {
-  display: flex;
-  justify-content: flex-end;
   gap: 0.75rem;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: #e2e8f0;
+  transition: all 0.15s;
 }
+.cwa-check-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.cwa-check-item.done {
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+
+/* Form Controls */
+.cba-form-group {
+  margin-bottom: 1.15rem;
+}
+.cba-form-group label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  margin-bottom: 0.35rem;
+}
+.cba-form-row {
+  display: flex;
+  gap: 1rem;
+}
+.cba-form-row .cba-form-group {
+  flex: 1;
+}
+.cba-input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  font-size: 0.88rem;
+  outline: none;
+}
+.cba-input:focus {
+  border-color: #818cf8;
+}
+select.cba-input {
+  cursor: pointer;
+}
+select.cba-input option {
+  background-color: #0f172a;
+  color: #f1f5f9;
+  padding: 0.5rem;
+}
+.cba-textarea {
+  resize: vertical;
+}
+
+/* Chips */
 .cba-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.5rem;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 0.6rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.cba-domain-chips {
+  max-height: 140px;
 }
 .cba-chip {
-  padding: 0.3rem 0.7rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-size: 0.82rem;
   font-weight: 600;
-  background: rgba(255,255,255,0.04);
-  border: 1.5px solid rgba(255,255,255,0.07);
-  color: #94a3b8;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-.cba-chip:hover { background: rgba(255,255,255,0.08); color: #e2e8f0; }
-.cba-chip.active { background: rgba(129,140,248,0.12); border-color: rgba(129,140,248,0.3); color: #a5b4fc; }
-.cba-stepper {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.6rem 1rem;
-  background: rgba(15,23,42,0.5);
-  border: 1px solid rgba(255,255,255,0.06);
+  padding: 0.4rem 0.85rem;
   border-radius: 10px;
-  width: fit-content;
-}
-.cba-step-btn {
-  width: 34px; height: 34px;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.04);
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
-}
-.cba-step-btn:hover { background: rgba(129,140,248,0.1); color: #a5b4fc; }
-.cba-step-val {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  min-width: 24px;
-  text-align: center;
-}
-.cba-upload-zone {
-  border: 2px dashed rgba(255,255,255,0.08);
-  border-radius: 12px;
-  padding: 1.25rem;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  color: #64748b;
-  font-size: 0.78rem;
-  display: flex;
-  flex-direction: column;
+  transition: all 0.15s;
+  display: inline-flex;
   align-items: center;
   gap: 0.4rem;
 }
-.cba-upload-zone:hover { border-color: rgba(129,140,248,0.25); color: #818cf8; }
-.cba-upload-zone i { font-size: 1.5rem; }
-.cba-empty {
-  text-align: center;
-  padding: 3rem 2rem;
-  background: rgba(15,23,42,0.3);
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,0.04);
+.cba-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
-.cba-empty i { font-size: 2.2rem; color: #475569; margin-bottom: 0.85rem; display: block; }
-.cba-empty h3 { font-size: 0.95rem; font-weight: 700; color: #94a3b8; margin: 0 0 0.3rem; }
-.cba-empty p { font-size: 0.8rem; color: #475569; margin: 0 0 0.85rem; }
+.cba-chip.active {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: #818cf8;
+  color: #ffffff;
+}
+
+.cba-link-btn {
+  background: transparent;
+  border: none;
+  color: #818cf8;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cba-link-btn:hover {
+  text-decoration: underline;
+}
+
+/* Responsibilities List */
+.cba-resp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.cba-resp-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.cba-resp-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.2);
+  color: #c7d2fe;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cba-btn-add-resp {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px dashed rgba(129, 140, 248, 0.4);
+  color: #c7d2fe;
+  border-radius: 8px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cba-btn-add-resp:hover {
+  background: rgba(99, 102, 241, 0.3);
+  color: #ffffff;
+}
+
+/* Cover Image Upload (Cloudinary) */
+.cba-upload-zone {
+  border: 2px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 1.25rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(15, 23, 42, 0.5);
+  position: relative;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.cba-upload-zone:hover {
+  border-color: rgba(129, 140, 248, 0.5);
+  background: rgba(15, 23, 42, 0.8);
+}
+.cba-upload-zone.has-image {
+  padding: 0.5rem;
+  border-style: solid;
+  border-color: rgba(99, 102, 241, 0.4);
+}
+.cba-upload-icon {
+  font-size: 1.8rem;
+  color: #818cf8;
+  margin-bottom: 0.25rem;
+}
+.cba-upload-text {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  margin: 0 0 0.15rem;
+}
+.cba-upload-text span {
+  color: #818cf8;
+  font-weight: 700;
+  text-decoration: underline;
+}
+.cba-upload-hint {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin: 0;
+}
+.cba-upload-preview {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.cba-upload-remove {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.cba-upload-remove:hover {
+  background: #ef4444;
+}
+
+/* Stepper */
+.cba-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.25rem 0.5rem;
+}
+.cba-step-btn {
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.cba-step-val {
+  font-weight: 800;
+  color: #f1f5f9;
+  font-size: 0.9rem;
+}
+
+/* Modals */
+.cba-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  padding: 1.5rem;
+}
+.cba-modal {
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 24px;
+  width: 100%;
+  max-width: 880px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75);
+}
+.cba-modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cba-modal-header h3 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  margin: 0;
+}
+.cba-modal-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.cba-modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+.cba-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+/* Buttons */
+.cba-btn-primary {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  border: none;
+  border-radius: 10px;
+  padding: 0.6rem 1.2rem;
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+}
+.cba-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+}
+.cba-btn-primary.sm {
+  padding: 0.5rem 0.9rem;
+  font-size: 0.82rem;
+}
+
+.cba-btn-glass {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 0.6rem 1.1rem;
+  color: #cbd5e1;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cba-btn-outline {
+  background: transparent;
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  color: #c7d2fe;
+  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cba-back-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  border-radius: 8px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cba-empty, .cba-apps-prompt, .cba-loading {
+  text-align: center;
+  padding: 3.5rem 1.5rem;
+  color: #64748b;
+}
+.cba-empty i, .cba-apps-prompt i {
+  font-size: 2.5rem;
+  color: #475569;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+/* Toast */
 .cba-toast {
   position: fixed;
   bottom: 2rem;
   right: 2rem;
-  z-index: 100001;
-  padding: 0.85rem 1.25rem;
+  padding: 0.75rem 1.25rem;
   border-radius: 12px;
-  color: #f1f5f9;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 0.88rem;
   font-weight: 600;
-  font-size: 0.85rem;
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  background: rgba(15,23,42,0.95);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.1);
-  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-  animation: cbaSlideUp 0.35s cubic-bezier(0.16,1,0.3,1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 1100;
 }
-.cba-toast i { font-size: 1rem; }
-.cba-toast.success i { color: #4ade80; }
-.cba-toast.confetti i { color: #fbbf24; }
-.cba-confetti-container {
-  position: fixed;
-  inset: 0;
-  z-index: 100002;
-  pointer-events: none;
-  overflow: hidden;
-}
-.cba-confetti-piece {
-  position: absolute;
-  top: -10px;
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  animation: cbaConfettiFall linear forwards;
-}
-@keyframes cbaConfettiFall {
-  0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-}
-@keyframes cbaFadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes cbaSlideUp { from { opacity: 0; transform: translateY(20px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@media (max-width: 992px) {
-  .cba-hero-inner { flex-direction: column; gap: 1.5rem; }
-  .cba-stat-grid { width: 100%; min-width: 0; }
-  .cba-hero-title { font-size: 1.7rem; }
-  .cba-tabs { width: 100%; overflow-x: auto; }
-  .cba-form-row { grid-template-columns: 1fr; }
-}
-@media (max-width: 768px) {
-  .cba-toolbar { flex-direction: column; }
-  .cba-search-wrap { width: 100%; }
-  .cba-filter-select { width: 100%; }
-}
+.cba-toast.success { border-color: #34d399; }
+.cba-toast.error { border-color: #ef4444; }
+.cba-toast.success i { color: #34d399; }
+.cba-toast.error i { color: #ef4444; }
 </style>

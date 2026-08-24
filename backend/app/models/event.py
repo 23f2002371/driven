@@ -33,6 +33,7 @@ from app.utils.enums import (
     AttendanceStatus,
     CertificateType,
     EventCategory,
+    EventRejectionReason,
     EventStatus,
     EventVenue,
     RegistrationStatus,
@@ -136,6 +137,12 @@ class Event(Base):
     )
     discussion_thread: Mapped[DiscussionThread | None] = relationship(
         "DiscussionThread",
+        back_populates="event",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+    rejection_reason: Mapped[EventRejectReason | None] = relationship(
+        "EventRejectReason",
         back_populates="event",
         cascade="all, delete-orphan",
         uselist=False,
@@ -410,3 +417,56 @@ class Certificate(Base):
             f"<Certificate id={self.id} event_id={self.event_id} "
             f"certificate_type={self.certificate_type}>"
         )
+
+
+class EventRejectReason(Base):
+    """Reason and optional alternatives provided when an event request is rejected."""
+
+    __tablename__ = "event_reject_reasons"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    event_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("events.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+    reason: Mapped[EventRejectionReason] = mapped_column(
+        Enum(
+            EventRejectionReason,
+            name="event_rejection_reason",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=False,
+    )
+    alternative_venue: Mapped[EventVenue | None] = mapped_column(
+        Enum(
+            EventVenue,
+            name="event_venue",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=True,
+    )
+    alternative_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    admin_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    event: Mapped[Event] = relationship("Event", back_populates="rejection_reason")
+
+    def __repr__(self) -> str:
+        return f"<EventRejectReason id={self.id} event_id={self.event_id} reason={self.reason}>"

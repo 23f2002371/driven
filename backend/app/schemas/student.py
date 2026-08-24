@@ -16,22 +16,26 @@ from app.utils.enums import Department, DomainEnum, TechnologyEnum
 
 class StudentCreate(BaseModel):
 
+    name: str | None = Field(default=None, max_length=100)
     student_id: str = Field(min_length=1, max_length=20)
     department: Department
     phone: str | None = Field(default=None, max_length=20)
     github_url: str | None = Field(default=None, max_length=100)
     linkedin_url: str | None = Field(default=None, max_length=100)
     portfolio_url: str | None = Field(default=None, max_length=255)
+    domains: list[DomainItem] = []
 
 
 class StudentUpdate(BaseModel):
 
+    name: str | None = Field(default=None, max_length=100)
     student_id: str | None = Field(default=None, min_length=1, max_length=20)
     department: Department | None = None
     phone: str | None = Field(default=None, max_length=20)
     github_url: str | None = Field(default=None, max_length=100)
     linkedin_url: str | None = Field(default=None, max_length=100)
     portfolio_url: str | None = Field(default=None, max_length=255)
+    domains: list[DomainItem] | None = None
 
 
 class StudentResponse(BaseModel):

@@ -17,9 +17,11 @@
 from __future__ import annotations
 
 import uuid
+import base64
+import io
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile, status
 from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
@@ -67,6 +69,7 @@ from app.schemas.student import TechnologyItem as StudentTechnologyItem
 from app.utils.enums import (
     ApplicationStatus,
     BountyStatus,
+    DomainEnum,
     TechnologyEnum,
     UserRole,
     WorkStatus,
@@ -154,21 +157,15 @@ def _bounty_response(bounty: Bounty) -> BountyResponse:
 
 def _validate_technologies(
     db: DbSession,
-    domain_id: uuid.UUID,
     technology_ids: list[uuid.UUID],
 ) -> None:
-    """Ensure every technology exists and belongs to the given domain."""
+    """Ensure every technology exists in the database."""
     for technology_id in technology_ids:
         technology = db.get(Technology, technology_id)
         if technology is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Technology not found",
-            )
-        if technology.domain_id != domain_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Technology does not belong to the selected domain",
             )
 
 
@@ -312,6 +309,34 @@ def _validate_event(db: DbSession, event_id: uuid.UUID | None) -> None:
 
 
 # ---------------------------------------------------------------- Bounty
+@router.get(
+    "/bounties",
+    response_model=list[BountyResponse],
+)
+def list_bounties(
+    db: DbSession,
+    status: BountyStatus | None = None,
+    domain_id: uuid.UUID | None = None,
+) -> list[BountyResponse]:
+    """Fetch all bounties with nested domains, technologies, and responsibilities."""
+    stmt = (
+        select(Bounty)
+        .options(
+            selectinload(Bounty.domain),
+            selectinload(Bounty.technologies).selectinload(BountyTechnology.technology),
+            selectinload(Bounty.responsibilities),
+            selectinload(Bounty.created_by_user),
+        )
+        .order_by(Bounty.created_at.desc())
+    )
+    if status is not None:
+        stmt = stmt.where(Bounty.status == status)
+    if domain_id is not None:
+        stmt = stmt.where(Bounty.domain_id == domain_id)
+    bounties = list(db.scalars(stmt))
+    return [_bounty_response(b) for b in bounties]
+
+
 @router.post(
     "/bounties",
     response_model=BountyResponse,
@@ -328,7 +353,7 @@ def create_bounty(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Domain not found",
         )
-    _validate_technologies(db, payload.domain_id, payload.technologies)
+    _validate_technologies(db, payload.technologies)
 
     bounty = Bounty(
         title=payload.title,
@@ -339,24 +364,34 @@ def create_bounty(
         duration=payload.duration,
         student_seats=payload.student_seats,
         image_url=payload.image_url,
+        status=BountyStatus.OPEN,
         created_by=current_user.id,
     )
     db.add(bounty)
     try:
         db.flush()
-        bounty.technologies = [
-            BountyTechnology(technology_id=technology_id)
-            for technology_id in payload.technologies
-        ]
-        bounty.responsibilities = [
-            Responsibility(title=title) for title in payload.responsibilities
-        ]
+        for technology_id in payload.technologies:
+            db.add(
+                BountyTechnology(
+                    bounty_id=bounty.id,
+                    technology_id=technology_id,
+                )
+            )
+        for title in payload.responsibilities:
+            db.add(
+                Responsibility(
+                    bounty_id=bounty.id,
+                    title=title,
+                )
+            )
         db.commit()
     except Exception as exc:
         db.rollback()
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create bounty",
+            detail=f"Failed to create bounty: {exc}",
         ) from exc
 
     created_bounty = _load_bounty(db, bounty.id)
@@ -400,7 +435,7 @@ def update_bounty(
         domain_id = bounty.domain_id
 
     if technologies is not None:
-        _validate_technologies(db, domain_id, technologies)
+        _validate_technologies(db, technologies)
 
     for field, value in update_data.items():
         setattr(bounty, field, value)
@@ -535,6 +570,74 @@ def create_application(
             detail="Failed to load created application",
         )
     return _application_response(created_application)
+
+
+@router.get(
+    "/bounties/{bounty_id}/applications",
+    response_model=list[ApplicationResponse],
+)
+def list_bounty_applications(
+    bounty_id: uuid.UUID,
+    db: DbSession,
+    current_user: ClubAdmin,
+) -> list[ApplicationResponse]:
+    """List all applications submitted for a bounty (club admin only)."""
+    applications = list(
+        db.scalars(
+            select(Application)
+            .where(Application.bounty_id == bounty_id)
+            .options(
+                selectinload(Application.bounty).selectinload(Bounty.domain),
+                selectinload(Application.bounty)
+                .selectinload(Bounty.technologies)
+                .selectinload(BountyTechnology.technology),
+                selectinload(Application.bounty).selectinload(Bounty.responsibilities),
+                selectinload(Application.bounty).selectinload(Bounty.created_by_user),
+                selectinload(Application.student).selectinload(Student.user),
+                selectinload(Application.student)
+                .selectinload(Student.domains)
+                .selectinload(StudentDomain.technologies)
+                .selectinload(StudentTechnology.technology),
+                selectinload(Application.work).selectinload(Work.deliverables),
+            )
+            .order_by(Application.created_at.desc())
+        )
+    )
+    return [_application_response(a) for a in applications]
+
+
+@router.get(
+    "/applications/me",
+    response_model=list[ApplicationResponse],
+)
+def get_my_applications(
+    db: DbSession,
+    current_user: StudentOnly,
+) -> list[ApplicationResponse]:
+    """Fetch the authenticated student's applications."""
+    student = _get_current_student(db, current_user)
+    applications = list(
+        db.scalars(
+            select(Application)
+            .where(Application.student_id == student.id)
+            .options(
+                selectinload(Application.bounty).selectinload(Bounty.domain),
+                selectinload(Application.bounty)
+                .selectinload(Bounty.technologies)
+                .selectinload(BountyTechnology.technology),
+                selectinload(Application.bounty).selectinload(Bounty.responsibilities),
+                selectinload(Application.bounty).selectinload(Bounty.created_by_user),
+                selectinload(Application.student).selectinload(Student.user),
+                selectinload(Application.student)
+                .selectinload(Student.domains)
+                .selectinload(StudentDomain.technologies)
+                .selectinload(StudentTechnology.technology),
+                selectinload(Application.work).selectinload(Work.deliverables),
+            )
+            .order_by(Application.created_at.desc())
+        )
+    )
+    return [_application_response(a) for a in applications]
 
 
 @router.get("/applications/{application_id}", response_model=ApplicationResponse)
@@ -883,3 +986,201 @@ def get_my_skills(
             detail="Student profile not found",
         )
     return _student_domain_items(student)
+
+
+@router.get(
+    "/work/me",
+    response_model=list[WorkResponse],
+)
+def get_my_work(
+    db: DbSession,
+    current_user: StudentOnly,
+) -> list[WorkResponse]:
+    """Fetch all assigned work/volunteering tasks for the authenticated student."""
+    student = _get_current_student(db, current_user)
+    work_list = list(
+        db.scalars(
+            select(Work)
+            .join(Application, Work.application_id == Application.id)
+            .where(Application.student_id == student.id)
+            .options(
+                selectinload(Work.deliverables),
+                selectinload(Work.event),
+                selectinload(Work.application).selectinload(Application.bounty),
+                selectinload(Work.application)
+                .selectinload(Application.student)
+                .selectinload(Student.user),
+            )
+            .order_by(Work.created_at.desc())
+        )
+    )
+    return [_work_response(w) for w in work_list]
+
+
+DOMAIN_TECHNOLOGY_MAPPING: dict[DomainEnum, list[TechnologyEnum]] = {
+    DomainEnum.PROGRAMMING_LANGUAGES: [
+        TechnologyEnum.PYTHON, TechnologyEnum.JAVA, TechnologyEnum.C, TechnologyEnum.CPP,
+        TechnologyEnum.C_SHARP, TechnologyEnum.JAVASCRIPT, TechnologyEnum.TYPESCRIPT,
+        TechnologyEnum.GO, TechnologyEnum.RUST, TechnologyEnum.PHP, TechnologyEnum.KOTLIN,
+        TechnologyEnum.SWIFT, TechnologyEnum.DART, TechnologyEnum.R,
+    ],
+    DomainEnum.WEB_DEVELOPMENT: [
+        TechnologyEnum.HTML, TechnologyEnum.CSS, TechnologyEnum.TAILWIND_CSS,
+        TechnologyEnum.BOOTSTRAP, TechnologyEnum.REACT, TechnologyEnum.NEXT_JS,
+        TechnologyEnum.VUE_JS, TechnologyEnum.NUXT_JS, TechnologyEnum.ANGULAR, TechnologyEnum.SVELTE,
+    ],
+    DomainEnum.BACKEND_DEVELOPMENT: [
+        TechnologyEnum.NODE_JS, TechnologyEnum.EXPRESS_JS, TechnologyEnum.FASTAPI,
+        TechnologyEnum.FLASK, TechnologyEnum.DJANGO, TechnologyEnum.SPRING_BOOT,
+        TechnologyEnum.NEST_JS, TechnologyEnum.LARAVEL, TechnologyEnum.ASP_NET,
+        TechnologyEnum.GRAPHQL, TechnologyEnum.REST_API,
+    ],
+    DomainEnum.APP_DEVELOPMENT: [
+        TechnologyEnum.FLUTTER, TechnologyEnum.REACT_NATIVE, TechnologyEnum.ANDROID,
+        TechnologyEnum.JETPACK_COMPOSE, TechnologyEnum.SWIFT_UI,
+    ],
+    DomainEnum.AI_ML: [
+        TechnologyEnum.NUMPY, TechnologyEnum.PANDAS, TechnologyEnum.SCIKIT_LEARN,
+        TechnologyEnum.TENSORFLOW, TechnologyEnum.PYTORCH, TechnologyEnum.KERAS,
+        TechnologyEnum.OPENCV, TechnologyEnum.LANGCHAIN, TechnologyEnum.HUGGING_FACE,
+        TechnologyEnum.OPENAI_API,
+    ],
+    DomainEnum.DATA_SCIENCE: [
+        TechnologyEnum.MATPLOTLIB, TechnologyEnum.SEABORN, TechnologyEnum.POWER_BI,
+        TechnologyEnum.TABLEAU, TechnologyEnum.JUPYTER,
+    ],
+    DomainEnum.CYBER_SECURITY: [
+        TechnologyEnum.KALI_LINUX, TechnologyEnum.WIRESHARK, TechnologyEnum.BURP_SUITE,
+        TechnologyEnum.NMAP, TechnologyEnum.METASPLOIT, TechnologyEnum.OWASP,
+    ],
+    DomainEnum.CLOUD_COMPUTING: [
+        TechnologyEnum.AWS, TechnologyEnum.AZURE, TechnologyEnum.GOOGLE_CLOUD,
+        TechnologyEnum.FIREBASE, TechnologyEnum.SUPABASE,
+    ],
+    DomainEnum.DEVOPS: [
+        TechnologyEnum.DOCKER, TechnologyEnum.KUBERNETES, TechnologyEnum.JENKINS,
+        TechnologyEnum.GITHUB_ACTIONS, TechnologyEnum.TERRAFORM, TechnologyEnum.ANSIBLE,
+        TechnologyEnum.NGINX, TechnologyEnum.LINUX,
+    ],
+    DomainEnum.DATABASE: [
+        TechnologyEnum.POSTGRESQL, TechnologyEnum.MYSQL, TechnologyEnum.SQLITE,
+        TechnologyEnum.MONGODB, TechnologyEnum.REDIS, TechnologyEnum.ORACLE, TechnologyEnum.SQL_SERVER,
+    ],
+    DomainEnum.UI_UX_DESIGN: [
+        TechnologyEnum.FIGMA, TechnologyEnum.ADOBE_XD, TechnologyEnum.CANVA,
+        TechnologyEnum.PHOTOSHOP, TechnologyEnum.ILLUSTRATOR,
+    ],
+    DomainEnum.ROBOTICS: [
+        TechnologyEnum.ROS, TechnologyEnum.ARDUINO, TechnologyEnum.RASPBERRY_PI,
+    ],
+    DomainEnum.IOT: [
+        TechnologyEnum.ESP32, TechnologyEnum.MQTT,
+    ],
+    DomainEnum.BLOCKCHAIN: [
+        TechnologyEnum.SOLIDITY, TechnologyEnum.HARDHAT, TechnologyEnum.FOUNDRY,
+        TechnologyEnum.ETHERS_JS, TechnologyEnum.WEB3_JS,
+    ],
+    DomainEnum.GAME_DEVELOPMENT: [
+        TechnologyEnum.UNITY, TechnologyEnum.UNREAL_ENGINE, TechnologyEnum.GODOT, TechnologyEnum.BLENDER,
+    ],
+    DomainEnum.COMPETITIVE_PROGRAMMING: [
+        TechnologyEnum.CODEFORCES, TechnologyEnum.CODECHEF, TechnologyEnum.LEETCODE,
+        TechnologyEnum.ATCODER, TechnologyEnum.HACKERRANK,
+    ],
+}
+
+
+def _ensure_domains_and_techs_seeded(db: DbSession) -> None:
+    """Ensure all DomainEnum and TechnologyEnum records are seeded in DB."""
+    try:
+        for domain_enum, tech_enums in DOMAIN_TECHNOLOGY_MAPPING.items():
+            domain = db.scalar(
+                select(Domain)
+                .where(Domain.name == domain_enum)
+                .options(selectinload(Domain.technologies))
+            )
+            if domain is None:
+                domain = Domain(name=domain_enum)
+                db.add(domain)
+                db.flush()
+                existing_tech_names = set()
+            else:
+                existing_tech_names = {t.name for t in domain.technologies}
+
+            for tech_enum in tech_enums:
+                if tech_enum not in existing_tech_names:
+                    tech = Technology(domain_id=domain.id, name=tech_enum)
+                    db.add(tech)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[Domains Seeder Warning] {e}")
+
+
+@router.get(
+    "/domains",
+)
+def list_domains(
+    db: DbSession,
+):
+    """Fetch all domains and their associated technologies."""
+    _ensure_domains_and_techs_seeded(db)
+    domains = list(
+        db.scalars(
+            select(Domain)
+            .options(selectinload(Domain.technologies))
+            .order_by(Domain.name)
+        )
+    )
+    return [
+        {
+            "id": str(d.id),
+            "name": d.name.value if hasattr(d.name, "value") else str(d.name),
+            "technologies": [
+                {
+                    "id": str(t.id),
+                    "name": t.name.value if hasattr(t.name, "value") else str(t.name),
+                }
+                for t in d.technologies
+            ],
+        }
+        for d in domains
+    ]
+
+
+@router.post("/bounties/upload-image")
+async def upload_bounty_image(
+    current_user: ClubAdmin,
+    file: UploadFile = File(...),
+) -> dict[str, str]:
+    """Upload a bounty image to Cloudinary and return secure URL."""
+    try:
+        from app.core.config import settings
+        content = await file.read()
+        if settings.CLOUDINARY_CLOUD_NAME and settings.CLOUDINARY_API_KEY and settings.CLOUDINARY_API_SECRET:
+            import cloudinary
+            import cloudinary.uploader
+
+            cloudinary.config(
+                cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+                api_key=settings.CLOUDINARY_API_KEY,
+                api_secret=settings.CLOUDINARY_API_SECRET,
+            )
+            upload_result = cloudinary.uploader.upload(
+                io.BytesIO(content),
+                folder="club-management/bounties",
+                resource_type="image",
+                overwrite=True,
+            )
+            secure_url = upload_result.get("secure_url")
+            if secure_url:
+                return {"image_url": secure_url}
+        # Fallback to data URI if Cloudinary is not configured
+        b64 = base64.b64encode(content).decode("utf-8")
+        mime = file.content_type or "image/png"
+        return {"image_url": f"data:{mime};base64,{b64}"}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Image upload failed: {exc}",
+        )

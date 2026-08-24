@@ -66,6 +66,11 @@ const routes = [
     component: EventDetailsView
   },
   {
+    path: '/events/:id',
+    name: 'event-details-by-id',
+    component: EventDetailsView
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/'
   }

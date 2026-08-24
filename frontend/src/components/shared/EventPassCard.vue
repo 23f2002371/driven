@@ -2,7 +2,7 @@
   <div class="epc-ticket" @click="$emit('open', event)">
     <div class="epc-ticket-inner">
       <div class="epc-left">
-        <div class="epc-thumb" :style="{ backgroundImage: `url(${event.image})` }">
+        <div class="epc-thumb" :style="{ backgroundImage: `url(${eventThumbImage})` }">
           <div class="epc-thumb-overlay"></div>
           <div class="epc-category">{{ category }}</div>
         </div>
@@ -11,22 +11,22 @@
           <div class="epc-meta">
             <span><i class="bi bi-calendar3"></i>{{ event.date }}</span>
             <span><i class="bi bi-clock"></i>09:00 AM – 05:00 PM</span>
-            <span><i class="bi bi-geo-alt"></i>{{ event.venue }}</span>
+            <span><i class="bi bi-geo-alt"></i>{{ formatVenue(event.venue) }}</span>
           </div>
         </div>
       </div>
       <div class="epc-center">
         <div class="epc-status">
           <span class="epc-status-dot"></span>
-          Confirmed
+          {{ event.attendance_status === 'present' ? 'Present' : 'Confirmed' }}
         </div>
-        <div class="epc-id">DRV-2026-{{ String(event.id).padStart(5, '0') }}</div>
-        <div class="epc-batch" v-if="event.id <= 3">Batch {{ ['A', 'B', 'C'][event.id - 1] || 'A' }}</div>
+        <div class="epc-id">{{ passDisplayId }}</div>
       </div>
       <div class="epc-divider"><div class="epc-cut top"></div><div class="epc-cut btm"></div></div>
       <div class="epc-right">
         <div class="epc-qr">
-          <div class="epc-qr-grid">
+          <img v-if="event.qr_code_url" :src="event.qr_code_url" alt="QR Pass" class="epc-qr-img" />
+          <div v-else class="epc-qr-grid">
             <div v-for="i in 49" :key="i" class="epc-qr-cell" :class="{ 'epc-qr-on': (i * 7 + Math.floor(i / 7) * 3 + i % 13) % 3 !== 0 }"></div>
           </div>
           <div class="epc-qr-glow"></div>
@@ -35,8 +35,8 @@
       </div>
     </div>
     <div class="epc-actions">
-      <button class="epc-btn" @click.stop="$emit('open', event)"><i class="bi bi-eye me-1"></i>View Details</button>
-      <button class="epc-btn" @click.stop="$emit('download', event)"><i class="bi bi-download me-1"></i>Download Pass</button>
+      <button class="epc-btn" @click.stop="$emit('open', event)"><i class="bi bi-eye me-1"></i>View Pass</button>
+      <button class="epc-btn" @click.stop="$emit('open', event)"><i class="bi bi-qr-code me-1"></i>QR Code</button>
       <button class="epc-btn epc-btn-cal" @click.stop="$emit('calendar', event)"><i class="bi bi-calendar-plus me-1"></i>Add to Calendar</button>
     </div>
   </div>
@@ -48,8 +48,22 @@ import { computed } from 'vue';
 const props = defineProps({ event: { type: Object, required: true } });
 defineEmits(['open', 'download', 'calendar']);
 
+const eventThumbImage = computed(() => {
+  return props.event.cover_image_url || props.event.image || 'https://images.unsplash.com/photo-1553408227-108e3f4edef1?w=600&h=400&fit=crop';
+});
+
+const formatVenue = (v) => {
+  if (!v) return 'Campus Facility';
+  return String(v).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
+
+const passDisplayId = computed(() => {
+  const regId = props.event.registration_id || props.event.id;
+  return `PASS-${String(regId).slice(0, 8).toUpperCase()}`;
+});
+
 const category = computed(() => {
-  const n = props.event.name.toLowerCase();
+  const n = (props.event.name || '').toLowerCase();
   if (n.includes('hackathon')) return 'Hackathon';
   if (n.includes('bootcamp') || n.includes('workshop')) return 'Workshop';
   if (n.includes('seminar')) return 'Seminar';
@@ -170,6 +184,11 @@ const category = computed(() => {
   background: #fff; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   padding: 6px;
+}
+.epc-qr-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .epc-qr-grid {
   display: grid; grid-template-columns: repeat(7, 1fr);

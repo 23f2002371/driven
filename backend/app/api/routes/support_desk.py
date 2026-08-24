@@ -50,7 +50,7 @@ def _thread_response(thread: DiscussionThread) -> DiscussionThreadResponse:
         event_id=thread.event_id,
         title=thread.title,
         created_by=thread.created_by,
-        creator_name=thread.creator.full_name,
+        creator_name=thread.creator.full_name if thread.creator else "Club Admin",
         created_at=thread.created_at,
         updated_at=thread.updated_at,
     )
@@ -61,8 +61,9 @@ def _message_response(message: DiscussionMessage) -> DiscussionMessageResponse:
     nested replies."""
     return DiscussionMessageResponse(
         id=message.id,
-        author_name=message.user.full_name,
-        author_role=message.user.role,
+        user_id=message.user_id,
+        author_name=message.user.full_name if message.user else "User",
+        author_role=message.user.role if message.user else "student",
         message=message.message,
         created_at=message.created_at,
         updated_at=message.updated_at,
@@ -150,6 +151,50 @@ def get_event_discussion_thread(
             detail="Discussion thread not found",
         )
     return _thread_response(thread)
+@router.get(
+    "/discussion/threads",
+    response_model=list[DiscussionThreadResponse],
+)
+def list_discussion_threads(
+    db: DbSession,
+    current_user: CurrentUser,
+) -> list[DiscussionThreadResponse]:
+    """Fetch all discussion threads (authenticated)."""
+    threads = list(
+        db.scalars(
+            select(DiscussionThread)
+            .options(selectinload(DiscussionThread.creator))
+            .order_by(DiscussionThread.created_at.desc())
+        )
+    )
+    return [_thread_response(t) for t in threads]
+
+
+@router.delete(
+    "/discussion/threads/{thread_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_discussion_thread(
+    thread_id: uuid.UUID,
+    db: DbSession,
+    current_user: ClubAdmin,
+) -> None:
+    """Delete a discussion thread (club admin only)."""
+    thread = db.scalar(select(DiscussionThread).where(DiscussionThread.id == thread_id))
+    if thread is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Discussion thread not found",
+        )
+    db.delete(thread)
+    try:
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete discussion thread",
+        ) from exc
 
 
 # ----------------------------------------------------------- Messages
