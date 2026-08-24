@@ -225,6 +225,9 @@
             <div class="ce-left">
               <!-- ================= PAGE 1: BASIC INFORMATION ================= -->
               <div v-if="createStep === 1" class="ce-page-anim">
+                <!-- AI Quick Event Generator -->
+                <AIEventGenerator @generated="handleEventGenerated" />
+
                 <!-- Section 1: Event Information -->
                 <section class="ce-section" data-idx="0">
                   <div class="ce-section-head">
@@ -795,6 +798,7 @@ import { fetchEventsApi, createEventApi, updateEventApi, deleteEventApi } from '
 import { fetchEquipmentApi, fetchBorrowDetailsApi, returnBorrowedEquipmentApi } from '../api/inventory';
 import ClubAdminEquipmentScanner from './shared/ClubAdminEquipmentScanner.vue';
 import SupportDeskDiscussionHub from './shared/SupportDeskDiscussionHub.vue';
+import AIEventGenerator from './shared/AIEventGenerator.vue';
 
 const liveEvents = ref([]);
 const selectedSupportEventId = ref('');
@@ -928,6 +932,21 @@ const resetFormEvent = () => {
     description: '',
   });
   createStep.value = 1;
+};
+
+const handleEventGenerated = (generatedData) => {
+  if (!generatedData) return;
+  if (generatedData.name) formEvent.name = generatedData.name;
+  if (generatedData.short_description) formEvent.short_description = generatedData.short_description;
+  if (generatedData.category) formEvent.category = generatedData.category.toLowerCase();
+  if (generatedData.event_date) formEvent.event_date = generatedData.event_date;
+  if (generatedData.registration_deadline) {
+    formEvent.registration_deadline = generatedData.registration_deadline.slice(0, 16);
+  }
+  if (generatedData.venue) formEvent.venue = generatedData.venue.toLowerCase();
+  if (generatedData.max_participants) formEvent.max_participants = Number(generatedData.max_participants) || 50;
+  if (generatedData.description) formEvent.description = generatedData.description;
+  triggerCalendarToast('Event details auto-filled by AI!');
 };
 
 const openCreateEventTab = () => {

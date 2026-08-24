@@ -28,6 +28,14 @@ export const store = reactive({
   viewingEventDetails: null,
   registeredEvents: [3, 5, 6],
   showRegistrationModal: false,
+  isCopilotOpen: false,
+  toggleCopilot(val) {
+    if (typeof val === 'boolean') {
+      this.isCopilotOpen = val;
+    } else {
+      this.isCopilotOpen = !this.isCopilotOpen;
+    }
+  },
   studentProfile: {
     fullName: 'Rahul Sharma',
     studentId: 'CS2024001',

@@ -160,6 +160,10 @@
                 <i class="bi bi-link-45deg"></i>Resume / Portfolio
               </a>
             </div>
+            <!-- AI Fit Analysis Screening Card -->
+            <div @click.stop>
+              <BountyMatchCard :application-id="app.id" />
+            </div>
           </div>
           <div class="cba-app-status-badge" :class="app.status">
             {{ (app.status || 'pending').toUpperCase() }}
@@ -491,6 +495,7 @@
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue';
 import { store } from '../store/mockData';
+import BountyMatchCard from './shared/BountyMatchCard.vue';
 import {
   fetchBountiesApi,
   createBountyApi,

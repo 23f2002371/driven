@@ -1,8 +1,7 @@
 <template>
   <div id="app">
     <router-view />
-    <CopilotButton :open="copilotOpen" @toggle="copilotOpen = !copilotOpen" />
-    <CopilotPanel :open="copilotOpen" @close="copilotOpen = false" />
+    <CopilotPanel :open="store.isCopilotOpen" @close="store.isCopilotOpen = false" />
   </div>
 </template>
 
@@ -11,12 +10,10 @@ import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { store } from './store/mockData';
 import * as api from './api/auth';
-import CopilotButton from './components/shared/CopilotButton.vue';
 import CopilotPanel from './components/shared/CopilotPanel.vue';
 
 const router = useRouter();
 const route = useRoute();
-const copilotOpen = ref(false);
 
 const routeMap = {
   home: 'home',

@@ -137,6 +137,8 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue';
 import { suggestedPrompts, demoMessages } from '../../store/copilotData';
+import { sendCopilotMessageApi } from '../../api/ai';
+import { store } from '../../store/mockData';
 
 const props = defineProps({ open: Boolean });
 const emit = defineEmits(['close']);
@@ -144,10 +146,12 @@ const emit = defineEmits(['close']);
 const inputText = ref('');
 const messages = ref([...demoMessages]);
 const chatRef = ref(null);
+const isTyping = ref(false);
 
-const sendPrompt = (text) => {
+const sendPrompt = async (text) => {
   const prompt = (text || inputText.value).trim();
   if (!prompt) return;
+
   messages.value.push({
     id: Date.now(),
     role: 'user',
@@ -155,16 +159,34 @@ const sendPrompt = (text) => {
     timestamp: 'Just now',
   });
   inputText.value = '';
-  setTimeout(() => {
-    messages.value.push({
-      id: Date.now() + 1,
-      role: 'assistant',
-      text: 'Thanks for your question! I\'m currently in demo mode. In production, I\'ll connect to AI to provide intelligent responses.',
-      timestamp: 'Just now',
-    });
-    scrollToBottom();
-  }, 800);
   scrollToBottom();
+
+  const loadingId = Date.now() + 1;
+  messages.value.push({
+    id: loadingId,
+    role: 'assistant',
+    text: 'Thinking...',
+    timestamp: 'Just now',
+  });
+  isTyping.value = true;
+  scrollToBottom();
+
+  try {
+    const token = store.token || localStorage.getItem('driven_token');
+    const response = await sendCopilotMessageApi(prompt, token);
+    const msgIndex = messages.value.findIndex(m => m.id === loadingId);
+    if (msgIndex !== -1) {
+      messages.value[msgIndex].text = response.text || 'Response received.';
+    }
+  } catch (err) {
+    const msgIndex = messages.value.findIndex(m => m.id === loadingId);
+    if (msgIndex !== -1) {
+      messages.value[msgIndex].text = `Error: ${err.message || 'Connecting to Copilot AI failed. Please check backend GEMINI_API_KEY.'}`;
+    }
+  } finally {
+    isTyping.value = false;
+    scrollToBottom();
+  }
 };
 
 const scrollToBottom = async () => {
