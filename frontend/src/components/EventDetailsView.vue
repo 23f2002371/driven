@@ -166,6 +166,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { store } from '../store/mockData';
 import { fetchEventsApi, getPrivateEventApi, getEventApi } from '../api/events';
+import { getMyEventRegistrationsApi } from '../api/qr';
 import { getMyStudentProfileApi } from '../api/student';
 import RegistrationModal from './RegistrationModal.vue';
 import CalendarPickerModal from './shared/CalendarPickerModal.vue';
@@ -404,6 +405,15 @@ const shareEvent = () => {
 let observer = null;
 onMounted(async () => {
   await loadEventData();
+  const token = store.token || localStorage.getItem('driven_token');
+  if (token) {
+    try {
+      const list = await getMyEventRegistrationsApi(token);
+      if (Array.isArray(list)) {
+        store.registeredEvents = list.map(r => r.event_id);
+      }
+    } catch {}
+  }
 
   observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {

@@ -6,7 +6,7 @@
       </div>
       <div>
         <h6 class="ai-gen-title">AI Quick Event Generator</h6>
-        <p class="ai-gen-subtitle">Describe your event naturally and AI will auto-fill the entire form.</p>
+        <p class="ai-gen-subtitle">Describe your event naturally — AI auto-fills details, agenda schedule, learning outcomes & requirements.</p>
       </div>
       <span class="ai-gen-pill">Powered by Gemini</span>
     </div>
@@ -59,7 +59,11 @@ const generate = async () => {
     emit('generated', data);
     prompt.value = '';
   } catch (err) {
-    alert('AI Generation failed: ' + (err.message || 'Please check Gemini API key.'));
+    let msg = err.message || 'Please check Gemini API key.';
+    if (msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('high demand') || msg.includes('demand')) {
+      msg = 'The Gemini AI service is experiencing temporary peak load. Please try again in a few moments.';
+    }
+    alert(msg);
   } finally {
     loading.value = false;
   }

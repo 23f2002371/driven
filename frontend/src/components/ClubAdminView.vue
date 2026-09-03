@@ -73,12 +73,54 @@
           </div>
 
           <div class="events-section-card">
-            <div class="events-header">
-              <h5 class="events-title"><i class="bi bi-calendar-event me-2"></i>Recent Events</h5>
+            <div class="events-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <div class="d-flex align-items-center gap-3 flex-wrap">
+                <h5 class="events-title m-0"><i class="bi bi-calendar-event me-2"></i>Recent Events</h5>
+                <div class="dashboard-status-tags-group">
+                  <button
+                    type="button"
+                    class="dashboard-status-tag tag-all"
+                    :class="{ active: dashboardEventFilter === 'all' }"
+                    @click="dashboardEventFilter = 'all'"
+                  >
+                    All <span class="tag-count">{{ store.events.length }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="dashboard-status-tag tag-approved"
+                    :class="{ active: dashboardEventFilter === 'approved' }"
+                    @click="dashboardEventFilter = 'approved'"
+                  >
+                    <i class="bi bi-check-circle-fill me-1"></i>Approved
+                    <span class="tag-count">{{ store.events.filter(e => (e.status || '').toLowerCase() === 'approved').length }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="dashboard-status-tag tag-pending"
+                    :class="{ active: dashboardEventFilter === 'pending' }"
+                    @click="dashboardEventFilter = 'pending'"
+                  >
+                    <i class="bi bi-clock-fill me-1"></i>Pending
+                    <span class="tag-count">{{ store.events.filter(e => (e.status || '').toLowerCase() === 'pending').length }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="dashboard-status-tag tag-rejected"
+                    :class="{ active: dashboardEventFilter === 'rejected' }"
+                    @click="dashboardEventFilter = 'rejected'"
+                  >
+                    <i class="bi bi-x-circle-fill me-1"></i>Rejected
+                    <span class="tag-count">{{ store.events.filter(e => (e.status || '').toLowerCase() === 'rejected' || e.rawStatus === 'rejected').length }}</span>
+                  </button>
+                </div>
+              </div>
               <button class="events-view-all" @click="currentTab = 'events'">View all <i class="bi bi-chevron-right ms-1"></i></button>
             </div>
             <div class="events-list">
-              <div v-for="event in store.events" :key="event.id" class="event-row" @click="openEventDetails(event)">
+              <div v-if="filteredDashboardEvents.length === 0" class="p-4 text-center text-muted" style="font-size: 0.85rem;">
+                No {{ dashboardEventFilter === 'all' ? '' : dashboardEventFilter }} events found.
+              </div>
+              <div v-for="event in filteredDashboardEvents" :key="event.id" class="event-row" @click="openEventDetails(event)">
                 <div class="event-thumb" :style="{ backgroundImage: `url(${event.image})` }">
                   <span class="event-badge">{{ event.name.includes('Workshop') ? 'Workshop' : event.name.includes('Hack') ? 'Hackathon' : event.name.includes('Bootcamp') ? 'Bootcamp' : event.name.includes('Seminar') ? 'Seminar' : 'Event' }}</span>
                 </div>
@@ -86,7 +128,7 @@
                   <div class="event-name-row">
                     <h6 class="event-name">{{ event.name }}</h6>
                     <div class="d-flex align-items-center gap-2">
-                      <span class="event-status" :class="(event.status || 'pending').toLowerCase()">{{ event.status }}</span>
+                      <span class="event-status-pill" :class="(event.status || 'pending').toLowerCase()">{{ event.status }}</span>
                       <button
                         v-if="event.status === 'Rejected' || event.rawStatus === 'rejected'"
                         class="btn-rejection-detail-sm"
@@ -119,24 +161,28 @@
             action="Switch Venue"
             class="mb-4"
           />
-          <div class="row g-4">
-            <div v-for="event in store.events" :key="event.id" class="col-md-6">
+          <div class="row g-3">
+            <div v-for="event in store.events" :key="event.id" class="col-xl-4 col-md-6">
               <div class="card-glass p-0 h-100 d-flex flex-column event-card-hover overflow-hidden" @click="openEventDetails(event)" style="cursor:pointer;">
-                <div class="event-card-img" :style="{ backgroundImage: `url(${event.image})` }">
-                  <div class="event-img-overlay d-flex justify-content-between align-items-start p-3">
-                    <span class="event-date-tag"><i class="bi bi-calendar3 me-1"></i>{{ event.date }}</span>
-                    <span class="event-status" :class="(event.status || 'pending').toLowerCase()">{{ event.status }}</span>
+                <div class="event-card-img-sm position-relative" :style="{ backgroundImage: `url(${event.image})` }">
+                  <div class="event-card-top-bar">
+                    <span class="event-date-pill"><i class="bi bi-calendar3"></i>{{ event.date }}</span>
+                    <span class="event-status-pill" :class="(event.status || 'pending').toLowerCase()">{{ event.status }}</span>
                   </div>
                 </div>
                 <div class="p-3 d-flex flex-column flex-grow-1">
-                  <h6 class="fw-bold text-light mb-1">{{ event.name }}</h6>
-                  <p class="text-secondary small mb-2 flex-grow-1">{{ event.description }}</p>
-                  <div class="event-meta">
+                  <h6 class="fw-bold text-light mb-1" style="font-size: 0.95rem;">{{ event.name }}</h6>
+                  <p class="text-secondary small mb-2 flex-grow-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.8rem; line-height: 1.45; min-height: 2.3em;">
+                    {{ event.short_description || event.description }}
+                  </p>
+                  <div class="event-meta mb-2">
                     <span><i class="bi bi-geo-alt-fill me-1"></i>{{ formatVenue(event.venue) }}</span>
                     <span><i class="bi bi-people-fill me-1"></i>{{ event.participants }} Max</span>
                   </div>
-                  <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
-                    <button class="btn-dashboard-primary btn-sm" @click.stop="openEventDetails(event)">View Details</button>
+                  <div class="event-card-actions">
+                    <button class="btn-dashboard-primary btn-sm flex-grow-1" @click.stop="openEventDetails(event)">
+                      <i class="bi bi-eye me-1"></i>View Details
+                    </button>
                     <button v-if="event.status === 'Approved'" class="btn-calendar-admin" title="Add to Calendar" @click.stop="openCalendarForEvent(event)">
                       <i class="bi bi-calendar-plus"></i>
                     </button>
@@ -160,7 +206,6 @@
             <div class="ce-hero-inner">
               <div class="ce-hero-left">
                 <div>
-                  <h1 class="ce-page-title">{{ editingEventId ? 'Update & Resubmit Event' : 'Create Event' }}</h1>
                   <p class="ce-page-sub">{{ editingEventId ? 'Modify event details according to administrator review feedback and resubmit for approval.' : 'Design your next workshop, hackathon, or seminar. Fill in the core details, configure the agenda and mentors, and submit for approval.' }}</p>
                 </div>
               </div>
@@ -363,22 +408,42 @@
               <div v-else-if="createStep === 2" class="ce-page-anim">
                 <!-- Section 1: Agendas Schedule -->
                 <section class="ce-section">
-                  <div class="ce-section-head d-flex justify-content-between align-items-center">
+                  <div class="ce-section-head d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
                       <h3><i class="bi bi-clock-history me-2 text-indigo"></i>Event Agendas / Schedule</h3>
                       <p>Add time-boxed agenda slots to outline the flow of the event.</p>
                     </div>
-                    <button type="button" class="ce-btn-add" @click="addAgendaItem">
-                      <i class="bi bi-plus-circle-fill me-1"></i>Add Agenda Slot
-                    </button>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        class="ce-btn-ai-pill"
+                        :disabled="isSuggestingDetails"
+                        @click="suggestDetailsForStep2('agenda')"
+                        title="Auto-suggest schedule with AI"
+                      >
+                        <span v-if="isSuggestingDetails" class="spinner-border spinner-border-sm me-1"></span>
+                        <i v-else class="bi bi-stars me-1 text-warning"></i>
+                        {{ isSuggestingDetails ? 'Generating...' : 'AI Suggest Agendas' }}
+                      </button>
+                      <button type="button" class="ce-btn-add" @click="addAgendaItem">
+                        <i class="bi bi-plus-circle-fill me-1"></i>Add Agenda Slot
+                      </button>
+                    </div>
                   </div>
 
                   <div v-if="formEvent.agendas.length === 0" class="ce-empty-box">
                     <i class="bi bi-calendar-range ce-empty-icon"></i>
-                    <p class="ce-empty-text">No agenda slots added yet. Click below to add your first session!</p>
-                    <button type="button" class="ce-btn-secondary btn-sm" @click="addAgendaItem">
-                      <i class="bi bi-plus-lg me-1"></i>Add First Session
-                    </button>
+                    <p class="ce-empty-text">No agenda slots added yet. Add sessions manually or let AI generate a complete schedule!</p>
+                    <div class="d-flex align-items-center justify-content-center gap-2 flex-wrap">
+                      <button type="button" class="ce-btn-ai-pill" :disabled="isSuggestingDetails" @click="suggestDetailsForStep2('agenda')">
+                        <span v-if="isSuggestingDetails" class="spinner-border spinner-border-sm me-1"></span>
+                        <i v-else class="bi bi-stars me-1 text-warning"></i>
+                        AI Auto-Fill Schedule
+                      </button>
+                      <button type="button" class="ce-btn-secondary btn-sm" @click="addAgendaItem">
+                        <i class="bi bi-plus-lg me-1"></i>Add First Session
+                      </button>
+                    </div>
                   </div>
 
                   <div v-else class="ce-cards-stack">
@@ -420,26 +485,50 @@
 
                 <!-- Section 2: Additional Info (Learning, Requirement, Eligibility) -->
                 <section class="ce-section">
-                  <div class="ce-section-head">
-                    <h3><i class="bi bi-card-checklist me-2 text-indigo"></i>Additional Event Information</h3>
-                    <p>Add multiple bullet points for learning outcomes, prerequisites, and eligibility details.</p>
+                  <div class="ce-section-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                      <h3><i class="bi bi-card-checklist me-2 text-indigo"></i>Additional Event Information</h3>
+                      <p>Add multiple bullet points for learning outcomes, prerequisites, and eligibility details.</p>
+                    </div>
+                    <button
+                      type="button"
+                      class="ce-btn-ai-pill"
+                      :disabled="isSuggestingDetails"
+                      @click="suggestDetailsForStep2('info')"
+                      title="Auto-suggest learning outcomes, requirements, and eligibility with AI"
+                    >
+                      <span v-if="isSuggestingDetails" class="spinner-border spinner-border-sm me-1"></span>
+                      <i v-else class="bi bi-stars me-1 text-warning"></i>
+                      {{ isSuggestingDetails ? 'Generating...' : 'AI Suggest All Details' }}
+                    </button>
                   </div>
 
                   <div class="ce-info-grid">
                     <!-- Learning Outcomes -->
                     <div class="ce-info-box">
-                      <div class="ce-info-header d-flex justify-content-between align-items-center">
+                      <div class="ce-info-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <div class="d-flex align-items-center gap-2">
                           <div class="ce-info-icon-badge blue"><i class="bi bi-book-fill"></i></div>
                           <h5 class="ce-info-title">Learning Outcomes</h5>
                         </div>
-                        <button type="button" class="ce-btn-add-sm" @click="addInfoItem('learning')">
-                          <i class="bi bi-plus-lg me-1"></i>Add Outcome
-                        </button>
+                        <div class="d-flex align-items-center gap-1.5">
+                          <button
+                            type="button"
+                            class="ce-btn-ai-chip"
+                            :disabled="isSuggestingDetails"
+                            @click="suggestDetailsForStep2('learning')"
+                            title="Suggest learning outcomes with AI"
+                          >
+                            <i class="bi bi-stars text-warning me-1"></i>AI Suggest
+                          </button>
+                          <button type="button" class="ce-btn-add-sm" @click="addInfoItem('learning')">
+                            <i class="bi bi-plus-lg me-1"></i>Add Outcome
+                          </button>
+                        </div>
                       </div>
 
                       <div v-if="getInfoItems('learning').length === 0" class="ce-empty-point-box">
-                        <span class="text-muted small">No learning outcomes added. Click "+ Add Outcome" to add points.</span>
+                        <span class="text-muted small">No learning outcomes added. Click "+ Add Outcome" or "AI Suggest" to add points.</span>
                       </div>
                       <div v-else class="ce-info-list">
                         <div v-for="(item, idx) in getInfoItems('learning')" :key="idx" class="ce-info-item-row">
@@ -460,18 +549,29 @@
 
                     <!-- Requirements & Prerequisites -->
                     <div class="ce-info-box">
-                      <div class="ce-info-header d-flex justify-content-between align-items-center">
+                      <div class="ce-info-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <div class="d-flex align-items-center gap-2">
                           <div class="ce-info-icon-badge purple"><i class="bi bi-laptop-fill"></i></div>
                           <h5 class="ce-info-title">Prerequisites & Requirements</h5>
                         </div>
-                        <button type="button" class="ce-btn-add-sm" @click="addInfoItem('requirement')">
-                          <i class="bi bi-plus-lg me-1"></i>Add Requirement
-                        </button>
+                        <div class="d-flex align-items-center gap-1.5">
+                          <button
+                            type="button"
+                            class="ce-btn-ai-chip"
+                            :disabled="isSuggestingDetails"
+                            @click="suggestDetailsForStep2('requirement')"
+                            title="Suggest prerequisites & requirements with AI"
+                          >
+                            <i class="bi bi-stars text-warning me-1"></i>AI Suggest
+                          </button>
+                          <button type="button" class="ce-btn-add-sm" @click="addInfoItem('requirement')">
+                            <i class="bi bi-plus-lg me-1"></i>Add Requirement
+                          </button>
+                        </div>
                       </div>
 
                       <div v-if="getInfoItems('requirement').length === 0" class="ce-empty-point-box">
-                        <span class="text-muted small">No requirements added. Click "+ Add Requirement" to add points.</span>
+                        <span class="text-muted small">No requirements added. Click "+ Add Requirement" or "AI Suggest" to add points.</span>
                       </div>
                       <div v-else class="ce-info-list">
                         <div v-for="(item, idx) in getInfoItems('requirement')" :key="idx" class="ce-info-item-row">
@@ -492,18 +592,29 @@
 
                     <!-- Eligibility Details -->
                     <div class="ce-info-box">
-                      <div class="ce-info-header d-flex justify-content-between align-items-center">
+                      <div class="ce-info-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <div class="d-flex align-items-center gap-2">
                           <div class="ce-info-icon-badge green"><i class="bi bi-person-check-fill"></i></div>
                           <h5 class="ce-info-title">Eligibility Details</h5>
                         </div>
-                        <button type="button" class="ce-btn-add-sm" @click="addInfoItem('eligibility')">
-                          <i class="bi bi-plus-lg me-1"></i>Add Eligibility
-                        </button>
+                        <div class="d-flex align-items-center gap-1.5">
+                          <button
+                            type="button"
+                            class="ce-btn-ai-chip"
+                            :disabled="isSuggestingDetails"
+                            @click="suggestDetailsForStep2('eligibility')"
+                            title="Suggest eligibility criteria with AI"
+                          >
+                            <i class="bi bi-stars text-warning me-1"></i>AI Suggest
+                          </button>
+                          <button type="button" class="ce-btn-add-sm" @click="addInfoItem('eligibility')">
+                            <i class="bi bi-plus-lg me-1"></i>Add Eligibility
+                          </button>
+                        </div>
                       </div>
 
                       <div v-if="getInfoItems('eligibility').length === 0" class="ce-empty-point-box">
-                        <span class="text-muted small">No eligibility details added. Click "+ Add Eligibility" to add points.</span>
+                        <span class="text-muted small">No eligibility details added. Click "+ Add Eligibility" or "AI Suggest" to add points.</span>
                       </div>
                       <div v-else class="ce-info-list">
                         <div v-for="(item, idx) in getInfoItems('eligibility')" :key="idx" class="ce-info-item-row">
@@ -799,9 +910,20 @@ import { fetchEquipmentApi, fetchBorrowDetailsApi, returnBorrowedEquipmentApi } 
 import ClubAdminEquipmentScanner from './shared/ClubAdminEquipmentScanner.vue';
 import SupportDeskDiscussionHub from './shared/SupportDeskDiscussionHub.vue';
 import AIEventGenerator from './shared/AIEventGenerator.vue';
+import { suggestEventDetailsApi } from '../api/ai';
 
 const liveEvents = ref([]);
 const selectedSupportEventId = ref('');
+const dashboardEventFilter = ref('all');
+
+const filteredDashboardEvents = computed(() => {
+  const list = store.events;
+  if (dashboardEventFilter.value === 'all') return list;
+  if (dashboardEventFilter.value === 'rejected') {
+    return list.filter(e => (e.status || '').toLowerCase() === 'rejected' || e.rawStatus === 'rejected');
+  }
+  return list.filter(e => (e.status || '').toLowerCase() === dashboardEventFilter.value);
+});
 
 const liveInventory = ref([]);
 const isInventoryLoading = ref(false);
@@ -826,9 +948,12 @@ const loadInventory = async () => {
       location: eq.storage_location || 'Campus Lab',
       image: eq.equipment_image_url || 'https://images.unsplash.com/photo-1581092335397-9583eb92d232?w=400&h=300&fit=crop',
       equipment_image_url: eq.equipment_image_url,
+      condition: eq.condition,
+      status: eq.status,
+      serial_number: eq.serial_number,
     }));
-  } catch {
-    liveInventory.value = store.inventory || [];
+  } catch (err) {
+    console.error('Failed to load equipment catalog:', err);
   } finally {
     isInventoryLoading.value = false;
   }
@@ -859,11 +984,10 @@ const addStock = (item, qty) => {
 const loadBorrowRecords = async () => {
   isBorrowRecordsLoading.value = true;
   try {
-    const token = store.token || localStorage.getItem('driven_token');
-    const data = await fetchBorrowDetailsApi(token);
-    liveBorrowRecords.value = Array.isArray(data) ? data : [];
+    const records = await fetchBorrowDetailsApi();
+    liveBorrowRecords.value = records;
   } catch (err) {
-    liveBorrowRecords.value = [];
+    console.error('Failed to load borrow records:', err);
   } finally {
     isBorrowRecordsLoading.value = false;
   }
@@ -902,6 +1026,7 @@ const showRejectionModal = ref(false);
 const rejectionModalEvent = ref(null);
 const isModalActionLoading = ref(false);
 const editingEventId = ref(null);
+const isSuggestingDetails = ref(false);
 
 const resetFormEvent = () => {
   editingEventId.value = null;
@@ -946,7 +1071,113 @@ const handleEventGenerated = (generatedData) => {
   if (generatedData.venue) formEvent.venue = generatedData.venue.toLowerCase();
   if (generatedData.max_participants) formEvent.max_participants = Number(generatedData.max_participants) || 50;
   if (generatedData.description) formEvent.description = generatedData.description;
-  triggerCalendarToast('Event details auto-filled by AI!');
+
+  // Auto-populate agendas
+  if (Array.isArray(generatedData.agendas) && generatedData.agendas.length > 0) {
+    formEvent.agendas = generatedData.agendas.map(a => ({
+      start_time: a.start_time || '',
+      end_time: a.end_time || '',
+      title: a.title || '',
+      description: a.description || ''
+    }));
+  }
+
+  // Auto-populate additional info (learning outcomes, requirements, eligibility)
+  const newAdditionalInfo = [];
+  if (Array.isArray(generatedData.additional_info) && generatedData.additional_info.length > 0) {
+    newAdditionalInfo.push(...generatedData.additional_info.map(item => ({
+      section_type: item.section_type || 'learning',
+      content: item.content || ''
+    })));
+  }
+  if (Array.isArray(generatedData.learning_outcomes)) {
+    generatedData.learning_outcomes.forEach(text => {
+      if (text && typeof text === 'string') newAdditionalInfo.push({ section_type: 'learning', content: text.trim() });
+    });
+  }
+  if (Array.isArray(generatedData.requirements) || Array.isArray(generatedData.prerequisites)) {
+    const reqs = generatedData.requirements || generatedData.prerequisites;
+    reqs.forEach(text => {
+      if (text && typeof text === 'string') newAdditionalInfo.push({ section_type: 'requirement', content: text.trim() });
+    });
+  }
+  if (Array.isArray(generatedData.eligibility)) {
+    generatedData.eligibility.forEach(text => {
+      if (text && typeof text === 'string') newAdditionalInfo.push({ section_type: 'eligibility', content: text.trim() });
+    });
+  }
+  if (newAdditionalInfo.length > 0) {
+    formEvent.additional_info = newAdditionalInfo;
+  }
+
+  triggerCalendarToast('Event details, agendas & learning outcomes auto-filled by AI!');
+};
+
+const suggestDetailsForStep2 = async (target = 'all') => {
+  if (!formEvent.name.trim()) {
+    triggerCalendarToast('Please enter an event name in Step 1 first.');
+    return;
+  }
+  isSuggestingDetails.value = true;
+  try {
+    const token = store.token || localStorage.getItem('driven_token');
+    const data = await suggestEventDetailsApi({
+      name: formEvent.name,
+      category: formEvent.category,
+      short_description: formEvent.short_description,
+      description: formEvent.description,
+      venue: formEvent.venue,
+      event_date: formEvent.event_date
+    }, token);
+
+    if (target === 'all' || target === 'agenda') {
+      if (Array.isArray(data.agendas) && data.agendas.length > 0) {
+        formEvent.agendas = data.agendas.map(a => ({
+          start_time: a.start_time || '',
+          end_time: a.end_time || '',
+          title: a.title || '',
+          description: a.description || ''
+        }));
+      }
+    }
+
+    if (Array.isArray(data.additional_info) && data.additional_info.length > 0) {
+      if (target === 'all' || target === 'info') {
+        formEvent.additional_info = data.additional_info.map(i => ({
+          section_type: i.section_type || 'learning',
+          content: i.content || ''
+        }));
+      } else if (['learning', 'requirement', 'eligibility'].includes(target)) {
+        const filteredNew = data.additional_info
+          .filter(i => i.section_type === target)
+          .map(i => ({ section_type: target, content: i.content || '' }));
+        if (filteredNew.length > 0) {
+          formEvent.additional_info = [
+            ...formEvent.additional_info.filter(i => i.section_type !== target),
+            ...filteredNew
+          ];
+        }
+      }
+    }
+
+    const toastMsg = target === 'agenda'
+      ? 'Agendas schedule generated by AI!'
+      : target === 'info'
+      ? 'Outcomes & requirements generated by AI!'
+      : target === 'learning'
+      ? 'Learning outcomes generated by AI!'
+      : target === 'requirement'
+      ? 'Requirements & prerequisites generated by AI!'
+      : target === 'eligibility'
+      ? 'Eligibility details generated by AI!'
+      : 'Agendas & details generated by AI!';
+
+    triggerCalendarToast(toastMsg);
+  } catch (err) {
+    triggerCalendarToast(err.message || 'Failed to suggest details from AI.');
+  } finally {
+    isSuggestingDetails.value = false;
+  }
 };
 
 const openCreateEventTab = () => {
@@ -1476,28 +1707,33 @@ onMounted(() => {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: #070b16;
+  background-color: #070b16;
+  background-image:
+    radial-gradient(ellipse 900px 700px at 85% 12%, rgba(124, 58, 237, 0.08) 0%, rgba(99, 102, 241, 0.03) 45%, transparent 70%),
+    radial-gradient(ellipse 750px 600px at 15% 88%, rgba(99, 102, 241, 0.07) 0%, rgba(139, 92, 246, 0.02) 50%, transparent 70%),
+    radial-gradient(ellipse 600px 450px at 20% 8%, rgba(139, 92, 246, 0.05) 0%, transparent 60%);
 }
 .bg-glow {
   position: absolute;
   border-radius: 50%;
-  filter: blur(100px);
-  animation: glowDrift 25s ease-in-out infinite;
+  filter: blur(140px);
+  animation: glowDrift 28s ease-in-out infinite;
+  pointer-events: none;
 }
 .glow-1 {
-  width: 500px; height: 500px;
-  top: -15%; left: -8%;
-  background: radial-gradient(circle, rgba(109,93,246,0.1) 0%, transparent 70%);
+  width: 600px; height: 600px;
+  top: -10%; left: -5%;
+  background: radial-gradient(circle, rgba(109, 93, 246, 0.09) 0%, rgba(99, 102, 241, 0.03) 50%, transparent 70%);
 }
 .glow-2 {
-  width: 400px; height: 400px;
-  bottom: -10%; right: -5%;
-  background: radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 70%);
-  animation-delay: -12s;
+  width: 550px; height: 550px;
+  top: 10%; right: -8%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, rgba(124, 58, 237, 0.02) 50%, transparent 70%);
+  animation-delay: -14s;
 }
 @keyframes glowDrift {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(40px, -30px) scale(1.05); }
+  50% { transform: translate(30px, -20px) scale(1.04); }
 }
 
 /* ── Main Wrapper ── */
@@ -1517,9 +1753,7 @@ onMounted(() => {
   align-items: center;
   padding: 0 2rem;
   height: 70px;
-  background: rgba(11, 17, 31, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: #0b111f;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   position: sticky;
   top: 0;
@@ -1823,6 +2057,62 @@ onMounted(() => {
   letter-spacing: 0.2px;
 }
 .events-title i { color: #818cf8; }
+.dashboard-status-tags-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 0.2rem 0.3rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.dashboard-status-tag {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  line-height: 1.2;
+}
+.dashboard-status-tag .tag-count {
+  font-size: 0.65rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  font-weight: 700;
+}
+.dashboard-status-tag:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.06);
+}
+.dashboard-status-tag.tag-all.active {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  border-color: rgba(99, 102, 241, 0.4);
+}
+.dashboard-status-tag.tag-approved.active {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.4);
+}
+.dashboard-status-tag.tag-pending.active {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.4);
+}
+.dashboard-status-tag.tag-rejected.active {
+  background: rgba(244, 63, 94, 0.2);
+  color: #fb7185;
+  border-color: rgba(244, 63, 94, 0.4);
+}
 .events-view-all {
   background: none;
   border: none;
@@ -1959,8 +2249,9 @@ onMounted(() => {
   line-height: 1.15;
 }
 .ce-page-sub {
-  font-size: 0.95rem;
-  color: #64748b;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #94a3b8;
   margin: 0;
   max-width: 480px;
   line-height: 1.6;
@@ -2276,6 +2567,53 @@ onMounted(() => {
   border-color: #818cf8;
   color: #ffffff;
   transform: translateY(-1px);
+}
+.ce-btn-ai-pill {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.22) 0%, rgba(147, 51, 234, 0.22) 100%);
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  color: #c7d2fe;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.ce-btn-ai-pill:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.4) 0%, rgba(147, 51, 234, 0.4) 100%);
+  border-color: rgba(165, 180, 252, 0.6);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.25);
+}
+.ce-btn-ai-pill:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.ce-btn-ai-chip {
+  background: rgba(129, 140, 248, 0.1);
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  color: #c7d2fe;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+.ce-btn-ai-chip:hover:not(:disabled) {
+  background: rgba(129, 140, 248, 0.22);
+  border-color: rgba(129, 140, 248, 0.45);
+  color: #ffffff;
+}
+.ce-btn-ai-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .ce-btn-delete {
   background: rgba(239, 68, 68, 0.1);
@@ -3181,28 +3519,93 @@ onMounted(() => {
   color: #475569;
   font-size: 2rem;
 }
+.event-card-top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  background: linear-gradient(180deg, rgba(7, 11, 20, 0.7) 0%, rgba(7, 11, 20, 0.1) 85%, transparent 100%);
+  z-index: 2;
+}
+.event-date-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(15, 23, 42, 0.75);
+  color: #c7d2fe;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.event-status-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.event-status-pill.approved {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+}
+.event-status-pill.pending {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+.event-status-pill.rejected {
+  background: rgba(244, 63, 94, 0.2);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+.event-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.25rem;
+}
 .btn-calendar-admin {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
   border-radius: 8px;
-  border: 1.5px solid rgba(129,140,248,0.15);
-  background: rgba(129,140,248,0.08);
-  color: #818cf8;
+  border: 1.5px solid rgba(129,140,248,0.25);
+  background: rgba(129,140,248,0.1);
+  color: #a5b4fc;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   flex-shrink: 0;
 }
 .btn-calendar-admin:hover {
-  background: rgba(129,140,248,0.15);
-  border-color: rgba(129,140,248,0.3);
-  transform: translateY(-2px);
+  background: rgba(129,140,248,0.22);
+  border-color: rgba(129,140,248,0.45);
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 .btn-rejection-detail {
-  padding: 0.28rem 0.65rem;
+  padding: 0.32rem 0.7rem;
+  height: 32px;
   border-radius: 8px;
   border: 1px solid rgba(244,63,94,0.3);
   background: rgba(244,63,94,0.1);
@@ -3213,6 +3616,7 @@ onMounted(() => {
   transition: all 0.2s;
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
 }
 .btn-rejection-detail:hover {
   background: rgba(244,63,94,0.22);

@@ -8,10 +8,6 @@
           <div class="cbs-hero-badge">Campus Bounty Board</div>
           <h1 class="cbs-hero-title">Opportunity Hub</h1>
           <p class="cbs-hero-text">Discover short-term opportunities posted by clubs. Complete real projects, earn verified experience, and build your placement portfolio.</p>
-          <div class="cbs-hero-actions">
-            <button class="cbs-btn-primary" @click="scrollToBounties"><i class="bi bi-compass me-2"></i>Browse Opportunities</button>
-            <button class="cbs-btn-glass" @click="activeSection = 'skills'"><i class="bi bi-diagram-3 me-2"></i>My Skills</button>
-          </div>
         </div>
         <div class="cbs-hero-right">
           <div class="cbs-stat-grid">
@@ -52,7 +48,7 @@
     <div class="cbs-tabs">
       <button class="cbs-tab" :class="{ active: activeSection === 'bounties' }" @click="activeSection = 'bounties'"><i class="bi bi-grid-3x3-gap-fill me-2"></i>Opportunities</button>
       <button class="cbs-tab" :class="{ active: activeSection === 'skills' }" @click="activeSection = 'skills'"><i class="bi bi-diagram-3 me-2"></i>Skill Matrix <span class="cbs-tab-badge">{{ interactiveSkills.length }}</span></button>
-      <button class="cbs-tab" :class="{ active: activeSection === 'portfolio' }" @click="activeSection = 'portfolio'"><i class="bi bi-award-fill me-2"></i>Verified Work <span v-if="myWorkList.length" class="cbs-tab-badge">{{ myWorkList.length }}</span></button>
+      <button class="cbs-tab" :class="{ active: activeSection === 'portfolio' }" @click="activeSection = 'portfolio'"><i class="bi bi-award-fill me-2"></i>Verified Work <span v-if="verifiedWorkList.length" class="cbs-tab-badge">{{ verifiedWorkList.length }}</span></button>
       <button class="cbs-tab" :class="{ active: activeSection === 'applications' }" @click="activeSection = 'applications'"><i class="bi bi-send-fill me-2"></i>My Applications <span v-if="myApplications.length" class="cbs-tab-badge">{{ myApplications.length }}</span></button>
     </div>
 
@@ -87,7 +83,12 @@
               <div class="cbs-club-avatar"><i class="bi bi-briefcase-fill"></i></div>
               <span class="cbs-club-name">{{ formatDomainName(bounty.domain?.name) }}</span>
             </div>
-            <span class="cbs-seats-badge"><i class="bi bi-people me-1"></i>{{ bounty.student_seats }} seats</span>
+            <div class="d-flex align-items-center gap-2">
+              <span v-if="getMatchedSkills(bounty).length" class="cbs-match-pill" title="Matches your declared technical skills">
+                <i class="bi bi-stars text-warning me-1"></i>Skill Match
+              </span>
+              <span class="cbs-seats-badge"><i class="bi bi-people me-1"></i>{{ bounty.student_seats }} seats</span>
+            </div>
           </div>
 
           <div class="cbs-card-body">
@@ -95,7 +96,16 @@
             <p class="cbs-card-desc">{{ bounty.description }}</p>
 
             <div class="cbs-skills-row" v-if="bounty.technologies?.length">
-              <span v-for="tech in bounty.technologies" :key="tech.id" class="cbs-skill-chip">{{ tech.name }}</span>
+              <span
+                v-for="tech in bounty.technologies"
+                :key="tech.id"
+                class="cbs-skill-chip"
+                :class="{ 'cbs-skill-matched': isTechMatched(tech.name) }"
+                :title="isTechMatched(tech.name) ? 'Matches your skill matrix' : ''"
+              >
+                <i v-if="isTechMatched(tech.name)" class="bi bi-check2 me-1"></i>
+                {{ tech.name }}
+              </span>
             </div>
 
             <div class="cbs-card-meta">
@@ -115,9 +125,17 @@
       </div>
 
       <div v-else class="cbs-empty">
-        <i class="bi bi-inbox"></i>
-        <h3>No opportunities found</h3>
-        <p>Try adjusting your search criteria or check back later.</p>
+        <i class="bi bi-briefcase text-secondary" style="font-size: 2.2rem;"></i>
+        <h3>No Matching Opportunities</h3>
+        <p v-if="interactiveSkills.length === 0" class="text-secondary small">
+          You haven't declared any technical skills in your Profile or Skill Matrix yet. Declare your skills to see matching opportunities!
+        </p>
+        <p v-else class="text-secondary small">
+          No open campus bounties currently match your declared skills. Check back soon as new bounties are posted!
+        </p>
+        <button v-if="interactiveSkills.length === 0" class="cbs-btn-primary sm mt-2" @click="activeSection = 'skills'">
+          <i class="bi bi-diagram-3 me-1"></i>Declare Skills in Skill Matrix
+        </button>
       </div>
     </div>
 
@@ -128,7 +146,13 @@
         <p class="text-secondary small">Your declared skill proficiencies categorized by domain with interactive 5-star proficiency ratings</p>
       </div>
 
-      <div class="cbs-skills-grid">
+      <div v-if="interactiveSkills.length === 0" class="cbs-empty-state">
+        <i class="bi bi-diagram-3"></i>
+        <h3>No Skills Declared Yet</h3>
+        <p>You haven't declared any skills yet. Select your skills and domains in your Profile to populate your Matrix!</p>
+      </div>
+
+      <div v-else class="cbs-skills-grid">
         <div v-for="skill in interactiveSkills" :key="skill.name" class="cbs-skill-card">
           <div class="cbs-skill-top">
             <div>
@@ -167,11 +191,11 @@
         <span class="spinner-border spinner-border-sm me-2"></span>Loading tasks...
       </div>
 
-      <div v-else-if="myWorkList.length" class="cbs-portfolio-grid">
-        <div v-for="work in myWorkList" :key="work.id" class="cbs-portfolio-card" @click="selectedWorkDetail = work">
+      <div v-else-if="verifiedWorkList.length" class="cbs-portfolio-grid">
+        <div v-for="work in verifiedWorkList" :key="work.id" class="cbs-portfolio-card" @click="selectedWorkDetail = work">
           <div class="d-flex justify-content-between align-items-start mb-2 w-100">
-            <span class="cbs-portfolio-badge">{{ (work.status || 'assigned').toUpperCase() }}</span>
-            <span class="text-secondary small"><i class="bi bi-calendar3 me-1"></i>Due: {{ formatDisplayDate(work.deadline) }}</span>
+            <span class="cbs-portfolio-badge verified"><i class="bi bi-patch-check-fill me-1"></i>VERIFIED &bull; COMPLETED</span>
+            <span class="text-secondary small"><i class="bi bi-calendar-check me-1"></i>Completed: {{ formatDisplayDate(work.updated_at || work.deadline) }}</span>
           </div>
           <h3 class="cbs-portfolio-title">{{ work.title }}</h3>
           <p class="cbs-portfolio-project">{{ work.task_description }}</p>
@@ -189,8 +213,8 @@
 
       <div v-else class="cbs-empty">
         <i class="bi bi-award"></i>
-        <h3>No verified work assignments yet</h3>
-        <p>Once you are accepted into a bounty, your assigned work and deliverables will be tracked here.</p>
+        <h3>No verified work completed yet</h3>
+        <p>Assigned project work will appear in your verified portfolio only after you complete all deliverables and the club admin approves and marks it as completed.</p>
       </div>
 
       <!-- Work Detail Modal -->
@@ -252,6 +276,15 @@
           </div>
           <div class="cbs-app-right">
             <span class="cbs-app-status" :class="app.status">{{ (app.status || 'pending').toUpperCase() }}</span>
+            <!-- Direct to Volunteering Tab for Accepted Applications -->
+            <button
+              v-if="app.status === 'accepted'"
+              class="cbs-btn-assigned-work mt-2"
+              title="Go to My Volunteering to view your assigned work and deliverables"
+              @click="goToVolunteering"
+            >
+              <i class="bi bi-briefcase-fill me-1"></i>Assigned Work
+            </button>
             <!-- Delete Rejected Application -->
             <button
               v-if="app.status === 'rejected'"
@@ -384,6 +417,8 @@ import {
   fetchDomainsAndTechsApi,
 } from '../api/bounty';
 
+const emit = defineEmits(['navigate']);
+
 const activeSection = ref('bounties');
 const searchQuery = ref('');
 const domainFilter = ref('All');
@@ -394,20 +429,7 @@ const availableDomains = ref([]);
 const myApplications = ref([]);
 const myWorkList = ref([]);
 
-const interactiveSkills = ref([
-  { name: 'React', domain: 'Web Development', level: 5 },
-  { name: 'Node.js', domain: 'Backend & APIs', level: 4 },
-  { name: 'Python', domain: 'AI & Data Science', level: 4 },
-  { name: 'Vue.js', domain: 'Web Development', level: 5 },
-  { name: 'FastAPI', domain: 'Backend & APIs', level: 4 },
-  { name: 'Docker', domain: 'Cloud & DevOps', level: 3 },
-  { name: 'PostgreSQL', domain: 'Database', level: 4 },
-  { name: 'Figma', domain: 'UI / UX Design', level: 4 },
-  { name: 'Solidity', domain: 'Blockchain', level: 3 },
-  { name: 'Arduino / IoT', domain: 'Robotics & Hardware', level: 4 },
-  { name: 'TypeScript', domain: 'Web Development', level: 4 },
-  { name: 'PyTorch', domain: 'AI & Data Science', level: 3 },
-]);
+const interactiveSkills = ref([]);
 
 const isLoadingBounties = ref(false);
 const isLoadingApplications = ref(false);
@@ -430,12 +452,61 @@ const applyForm = reactive({
 
 const getToken = () => store.token || localStorage.getItem('driven_token');
 
-const availableBountiesCount = computed(() => liveBounties.value.filter(b => b.status === 'open').length);
-const completedBountiesCount = computed(() => myWorkList.value.filter(w => w.status === 'completed').length);
+const normalizeSkillString = (str) => String(str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const isTechMatched = (techName) => {
+  if (!techName || !interactiveSkills.value?.length) return false;
+  const target = normalizeSkillString(techName);
+  return interactiveSkills.value.some(s => normalizeSkillString(s.name) === target);
+};
+
+const getMatchedSkills = (bounty) => {
+  if (!bounty || !interactiveSkills.value?.length) return [];
+  const matched = [];
+  if (Array.isArray(bounty.technologies)) {
+    bounty.technologies.forEach(t => {
+      const tName = t.name || t.technology || '';
+      if (isTechMatched(tName)) {
+        matched.push(tName);
+      }
+    });
+  }
+  return matched;
+};
+
+const isBountySkillMatched = (bounty) => {
+  if (!interactiveSkills.value || interactiveSkills.value.length === 0) {
+    return false;
+  }
+
+  const studentTechs = new Set(interactiveSkills.value.map(s => normalizeSkillString(s.name)));
+  const studentDomains = new Set(interactiveSkills.value.map(s => normalizeSkillString(s.domain)));
+
+  // Check 1: Direct technology match
+  if (Array.isArray(bounty.technologies) && bounty.technologies.length > 0) {
+    const hasTechMatch = bounty.technologies.some(t => {
+      const techNorm = normalizeSkillString(t.name || t.technology);
+      return studentTechs.has(techNorm);
+    });
+    if (hasTechMatch) return true;
+  }
+
+  // Check 2: Domain match
+  const bountyDomainNorm = normalizeSkillString(bounty.domain?.name || bounty.domain || bounty.category);
+  if (bountyDomainNorm && studentDomains.has(bountyDomainNorm)) {
+    return true;
+  }
+
+  return false;
+};
+
+const availableBountiesCount = computed(() => liveBounties.value.filter(b => b.status === 'open' && isBountySkillMatched(b)).length);
+const verifiedWorkList = computed(() => myWorkList.value.filter(w => w.status === 'completed'));
+const completedBountiesCount = computed(() => verifiedWorkList.value.length);
 const portfolioPoints = computed(() => completedBountiesCount.value * 100 + interactiveSkills.value.reduce((acc, s) => acc + s.level * 10, 0));
 
 const filteredBounties = computed(() => {
-  let result = liveBounties.value.filter(b => b.status === 'open');
+  let result = liveBounties.value.filter(b => b.status === 'open' && isBountySkillMatched(b));
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
     result = result.filter(b => (b.title || '').toLowerCase().includes(q) || (b.description || '').toLowerCase().includes(q));
@@ -454,6 +525,10 @@ const filteredBounties = computed(() => {
 });
 
 const hasApplied = (bountyId) => myApplications.value.some(a => a.bounty_id === bountyId || a.bountyId === bountyId);
+
+const goToVolunteering = () => {
+  emit('navigate', 'volunteering');
+};
 
 // ── Lifecycle ──
 onMounted(async () => {
@@ -482,21 +557,6 @@ const loadDomains = async () => {
   try {
     const data = await fetchDomainsAndTechsApi(getToken());
     availableDomains.value = data;
-    // Also supplement interactiveSkills with any unlisted technologies
-    if (data && data.length) {
-      data.forEach(d => {
-        d.technologies?.forEach(t => {
-          const techName = t.name.replace(/_/g, ' ');
-          if (!interactiveSkills.value.some(s => s.name.toLowerCase() === techName.toLowerCase())) {
-            interactiveSkills.value.push({
-              name: techName,
-              domain: formatDomainName(d.name),
-              level: 3,
-            });
-          }
-        });
-      });
-    }
   } catch (err) {
     console.error('Failed to load domains:', err);
   }
@@ -517,25 +577,28 @@ const loadMyApplications = async () => {
 const loadMySkills = async () => {
   try {
     const data = await fetchMySkillsApi(getToken());
-    if (data && data.length) {
+    const list = [];
+    if (Array.isArray(data) && data.length) {
       data.forEach(d => {
         d.technologies?.forEach(t => {
-          const techName = t.technology.replace(/_/g, ' ');
-          const existing = interactiveSkills.value.find(s => s.name.toLowerCase() === techName.toLowerCase());
-          if (existing) {
-            existing.domain = formatDomainName(d.domain);
-          } else {
-            interactiveSkills.value.unshift({
-              name: techName,
-              domain: formatDomainName(d.domain),
-              level: 4,
-            });
+          const rawTech = t.technology || t.name || '';
+          if (rawTech) {
+            const techName = rawTech.replace(/_/g, ' ');
+            if (!list.some(s => s.name.toLowerCase() === techName.toLowerCase())) {
+              list.push({
+                name: techName,
+                domain: formatDomainName(d.domain || d.name),
+                level: 4,
+              });
+            }
           }
         });
       });
     }
+    interactiveSkills.value = list;
   } catch (err) {
     console.error('Failed to load skills:', err);
+    interactiveSkills.value = [];
   }
 };
 
@@ -631,8 +694,8 @@ const displayToast = (msg, type = 'success') => {
 
 .cbs-hero {
   position: relative;
-  margin-bottom: 2rem;
-  padding: 2.5rem 0 1.5rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem 0 0.85rem;
   overflow: hidden;
 }
 .cbs-hero-glow {
@@ -646,7 +709,7 @@ const displayToast = (msg, type = 'success') => {
 .cbs-hero-inner {
   display: flex;
   align-items: center;
-  gap: 3rem;
+  gap: 2.5rem;
   position: relative;
   z-index: 1;
 }
@@ -655,33 +718,29 @@ const displayToast = (msg, type = 'success') => {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.3rem 0.8rem;
+  padding: 0.25rem 0.75rem;
   border-radius: 999px;
   background: rgba(99, 102, 241, 0.12);
   border: 1px solid rgba(129, 140, 248, 0.25);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #818cf8;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.5rem;
 }
 .cbs-hero-title {
-  font-size: 2.2rem;
+  font-size: 2.1rem;
   font-weight: 900;
   color: #f1f5f9;
-  margin: 0 0 0.6rem;
+  margin: 0 0 0.4rem;
   letter-spacing: -0.5px;
 }
 .cbs-hero-text {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   color: #94a3b8;
-  line-height: 1.6;
-  margin: 0 0 1.5rem;
-}
-.cbs-hero-actions {
-  display: flex;
-  gap: 0.75rem;
+  line-height: 1.55;
+  margin: 0;
 }
 
 .cbs-hero-right { flex-shrink: 0; }
@@ -894,6 +953,24 @@ const displayToast = (msg, type = 'success') => {
   border-color: rgba(52, 211, 153, 0.3);
   color: #34d399;
 }
+.cbs-skill-chip.cbs-skill-matched {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(52, 211, 153, 0.4);
+  color: #34d399;
+  font-weight: 700;
+}
+.cbs-match-pill {
+  background: rgba(99, 102, 241, 0.18);
+  border: 1px solid rgba(129, 140, 248, 0.4);
+  color: #a5b4fc;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
 .cbs-card-meta {
   display: flex;
   align-items: center;
@@ -1075,6 +1152,29 @@ const displayToast = (msg, type = 'success') => {
   cursor: pointer;
 }
 .cbs-btn-delete-app:hover { background: rgba(239, 68, 68, 0.25); }
+
+.cbs-btn-assigned-work {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  color: #34d399;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+.cbs-btn-assigned-work:hover {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: #34d399;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
 
 /* Modals */
 .cbs-modal-overlay {

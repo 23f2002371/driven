@@ -91,7 +91,10 @@
               <span><i class="bi bi-calendar3 text-primary"></i>Deadline: {{ formatDisplayDate(bounty.application_deadline) }}</span>
               <span><i class="bi bi-people text-info"></i>{{ bounty.student_seats }} Seats</span>
               <span><i class="bi bi-hourglass-split text-warning"></i>{{ bounty.duration }}</span>
-              <span v-if="bounty.technologies?.length" class="text-secondary"><i class="bi bi-cpu text-info"></i>{{ bounty.technologies.map(t => t.name).join(', ') }}</span>
+              <span v-if="bounty.technologies?.length" class="text-secondary" :title="bounty.technologies.map(t => t.name).join(', ')">
+                <i class="bi bi-cpu text-info"></i>
+                <span class="cba-tech-preview">{{ bounty.technologies.map(t => t.name).join(', ') }}</span>
+              </span>
             </div>
           </div>
           <div class="cba-bounty-status" @click.stop>
@@ -1365,6 +1368,7 @@ const displayToast = (msg, type = 'success') => {
 .cba-bounty-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 1.25rem;
   padding: 1.15rem 1.35rem;
   border-radius: 16px;
@@ -1373,6 +1377,10 @@ const displayToast = (msg, type = 'success') => {
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   backdrop-filter: blur(12px);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 .cba-bounty-row:hover {
   background: rgba(15, 23, 42, 0.9);
@@ -1398,8 +1406,15 @@ const displayToast = (msg, type = 'success') => {
   flex-shrink: 0;
 }
 .cba-bounty-info {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+}
+.cba-bounty-info h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1.35;
+  word-break: break-word;
 }
 .cba-bounty-cat {
   font-size: 0.68rem;
@@ -1414,24 +1429,42 @@ const displayToast = (msg, type = 'success') => {
 .cba-bounty-desc-preview {
   font-size: 0.84rem;
   color: #94a3b8;
-  margin: 0 0 0.5rem;
-  white-space: nowrap;
+  margin: 0.35rem 0 0.55rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.45;
+  word-break: break-word;
 }
 .cba-bounty-meta {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.6rem 1.25rem;
   font-size: 0.78rem;
   color: #cbd5e1;
   flex-wrap: wrap;
+}
+.cba-bounty-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+.cba-tech-preview {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
 }
 .cba-bounty-status {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   flex-shrink: 0;
+  margin-left: 1rem;
 }
 .cba-status-badge {
   font-size: 0.68rem;

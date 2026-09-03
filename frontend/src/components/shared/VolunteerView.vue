@@ -196,36 +196,12 @@ const loadMyWorkTasks = async () => {
         eventName: w.event?.name,
         bountyTitle: w.application?.bounty_title,
       }));
-    } else if (props.applications && props.applications.length) {
-      liveTasks.value = props.applications.map(a => ({
-        id: a.id,
-        application_id: a.id,
-        title: a.assignedTask || 'Volunteering Task',
-        task_description: a.taskDescription || 'Event Volunteer Assignment',
-        deadline: a.reportingTime || a.date,
-        status: a.status || 'assigned',
-        deliverables: (a.checklist || []).map((c, i) => ({ id: i, title: c.label, status: c.completed ? 'completed' : 'pending' })),
-        eventName: a.eventName,
-        bountyTitle: a.clubName,
-      }));
     } else {
       liveTasks.value = [];
     }
   } catch (err) {
     console.error('Failed to load my work:', err);
-    if (props.applications && props.applications.length) {
-      liveTasks.value = props.applications.map(a => ({
-        id: a.id,
-        application_id: a.id,
-        title: a.assignedTask || 'Volunteering Task',
-        task_description: a.taskDescription || 'Event Volunteer Assignment',
-        deadline: a.reportingTime || a.date,
-        status: a.status || 'assigned',
-        deliverables: (a.checklist || []).map((c, i) => ({ id: i, title: c.label, status: c.completed ? 'completed' : 'pending' })),
-        eventName: a.eventName,
-        bountyTitle: a.clubName,
-      }));
-    }
+    liveTasks.value = [];
   } finally {
     isLoading.value = false;
   }

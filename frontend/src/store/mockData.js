@@ -26,7 +26,7 @@ export const store = reactive({
   isAuthenticated: Boolean(savedToken),
   currentUserRole: savedUser ? savedUser.role : 'home',
   viewingEventDetails: null,
-  registeredEvents: [3, 5, 6],
+  registeredEvents: [],
   showRegistrationModal: false,
   isCopilotOpen: false,
   toggleCopilot(val) {
@@ -310,95 +310,7 @@ export const store = reactive({
     'Logistics', 'Content Writing',
   ],
 
-  volunteerApplications: [
-    {
-      id: 1, eventId: 2, status: 'accepted',
-      eventName: 'Hackathon 2026', clubName: 'TechNova',
-      date: 'Jul 22, 2026', venue: 'Auditorium',
-      image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=600&h=400&fit=crop',
-      role: 'Registration Desk',
-      assignedTask: 'Manage Registration Desk',
-      taskDescription: 'Handle participant check-in, distribute event kits, and guide attendees to their designated sections. Coordinate with the technical team for any registration issues.',
-      assignedBy: 'Arjun Mehta',
-      reportingTime: '08:00 AM',
-      volunteerLead: 'Priya Sharma',
-      priority: 'high',
-      completionDate: null,
-      thankYouMessage: null,
-      feedback: null,
-      checklist: [
-        { id: 1, label: 'Set up registration desk', completed: true },
-        { id: 2, label: 'Arrange event kits and badges', completed: true },
-        { id: 3, label: 'Coordinate with tech team', completed: false },
-        { id: 4, label: 'Manage check-in queue', completed: false },
-        { id: 5, label: 'Submit attendance report', completed: false },
-      ],
-      dressCode: 'Club T-shirt + ID Card',
-      notes: 'Report to the main lobby entrance. Breakfast will be provided.',
-    },
-    {
-      id: 2, eventId: 1, status: 'pending',
-      eventName: 'IoT Workshop', clubName: 'TechNova',
-      date: 'Jul 15, 2026', venue: 'Lab A',
-      image: 'https://images.unsplash.com/photo-1553408227-108e3f4edef1?w=600&h=400&fit=crop',
-      role: 'Technical Support',
-      assignedTask: null,
-      taskDescription: null,
-      assignedBy: null,
-      reportingTime: null,
-      volunteerLead: null,
-      priority: null,
-      completionDate: null,
-      thankYouMessage: null,
-      feedback: null,
-      checklist: [],
-      dressCode: null,
-      notes: null,
-    },
-    {
-      id: 3, eventId: 4, status: 'rejected',
-      eventName: 'AI/ML Seminar', clubName: 'TechNova',
-      date: 'Jul 25, 2026', venue: 'Seminar Hall',
-      image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=600&h=400&fit=crop',
-      role: 'Photography',
-      assignedTask: null,
-      taskDescription: null,
-      assignedBy: null,
-      reportingTime: null,
-      volunteerLead: null,
-      priority: null,
-      completionDate: null,
-      thankYouMessage: null,
-      feedback: 'We received many applications for Photography. Unfortunately, we had limited slots. Please try again for our next event.',
-      checklist: [],
-      dressCode: null,
-      notes: null,
-    },
-    {
-      id: 4, eventId: 5, status: 'completed',
-      eventName: 'Web3 Hack Night', clubName: 'Web3 Wizards',
-      date: 'Aug 5, 2026', venue: 'Innovation Lab',
-      image: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=600&h=400&fit=crop',
-      role: 'Stage Management',
-      assignedTask: 'Coordinate Speakers',
-      taskDescription: 'Managed speaker schedule, stage setup, and presentation transitions throughout the event.',
-      assignedBy: 'Rahul Verma',
-      reportingTime: '04:00 PM',
-      volunteerLead: 'Neha Patel',
-      priority: 'medium',
-      completionDate: 'Aug 5, 2026',
-      thankYouMessage: 'Thank you for your excellent coordination! The event ran smoothly because of your efforts.',
-      feedback: null,
-      checklist: [
-        { id: 1, label: 'Coordinate speaker arrival', completed: true },
-        { id: 2, label: 'Setup stage and AV equipment', completed: true },
-        { id: 3, label: 'Manage presentation transitions', completed: true },
-        { id: 4, label: 'Collect feedback forms', completed: true },
-      ],
-      dressCode: 'Formal attire',
-      notes: 'Great job managing the stage!',
-    },
-  ],
+  volunteerApplications: [],
 
   registrationDrafts: [],
 
@@ -620,6 +532,8 @@ export const store = reactive({
     this.currentUser = user;
     this.isAuthenticated = true;
     this.currentUserRole = (user && user.role) || 'student';
+    this.registeredEvents = [];
+    this.volunteerApplications = [];
     localStorage.setItem('driven_token', token);
     localStorage.setItem('driven_user', JSON.stringify(user));
     this.fetchEvents();
@@ -630,6 +544,8 @@ export const store = reactive({
     this.currentUser = null;
     this.isAuthenticated = false;
     this.currentUserRole = 'home';
+    this.registeredEvents = [];
+    this.volunteerApplications = [];
     localStorage.removeItem('driven_token');
     localStorage.removeItem('driven_user');
     this.fetchEvents();

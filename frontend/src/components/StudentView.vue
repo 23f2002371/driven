@@ -10,8 +10,8 @@
     <div class="std-wrapper">
       <nav class="std-topbar">
         <div class="std-topbar-left">
-          <h5 class="std-topbar-title">Student Portal</h5>
-         </div>
+          <h5 class="std-topbar-title">{{ currentTabLabel }}</h5>
+        </div>
         <div class="std-topbar-right">
           <button class="std-icon-btn" title="Search"><i class="bi bi-search"></i></button>
           <button class="std-icon-btn" title="Notifications" @click="goToNotifications"><i class="bi bi-bell"></i><span v-if="studentNotifCount > 0" class="std-badge">{{ studentNotifCount > 99 ? '99+' : studentNotifCount }}</span></button>
@@ -22,7 +22,7 @@
       </nav>
 
       <main class="std-main">
-        <div v-if="currentTab === 'dashboard'" class="pt-3">
+        <div v-if="currentTab === 'dashboard'">
         <div class="row g-4 mb-4">
           <div class="col-md-3 col-sm-6">
             <div class="std-metric-card">
@@ -129,6 +129,37 @@
       </div>
 
       <div v-else-if="currentTab === 'events'">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+          <div>
+            <h5 class="fw-bold m-0 text-light">Available Events</h5>
+            <span class="text-secondary" style="font-size:0.82rem;">Explore and register for upcoming club workshops, seminars, and hackathons.</span>
+          </div>
+
+          <!-- Interactive Filters -->
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              class="std-event-filter-pill"
+              :class="{ active: studentEventFilter === 'all' }"
+              @click="studentEventFilter = 'all'"
+            >
+              <i class="bi bi-grid-fill me-1"></i>All Events
+              <span class="std-filter-count">{{ approvedEvents.length }}</span>
+            </button>
+
+            <button
+              type="button"
+              class="std-event-filter-pill registered"
+              :class="{ active: studentEventFilter === 'registered' }"
+              @click="studentEventFilter = 'registered'"
+              title="Show only events you have registered for"
+            >
+              <i class="bi bi-check-circle-fill me-1 text-success"></i>My Registered Events
+              <span class="std-filter-count">{{ myRegisteredCount }}</span>
+            </button>
+          </div>
+        </div>
+
         <CopilotRecommendation
           title="AI Recommendation"
           icon="stars"
@@ -136,38 +167,84 @@
           action="Switch Venue"
           class="mb-4"
         />
-        <h5 class="fw-bold mb-4 text-light">Available Events for Registration</h5>
-        <div class="row g-4">
-          <div v-for="event in approvedEvents" :key="event.id" class="col-md-6">
-            <div class="card-glass p-0 h-100 d-flex flex-column event-card-hover overflow-hidden" @click="openEventDetails(event)">
-              <div class="event-card-img" :style="{ backgroundImage: `url(${event.image})` }">
-                <div class="event-img-overlay d-flex justify-content-between align-items-start p-3">
-                  <span class="event-date-tag"><i class="bi bi-calendar3 me-1"></i>{{ formatDate(event.date || event.event_date) }}</span>
-                  <span v-if="isEventOver(event) && !store.registeredEvents.includes(event.id)" class="std-closed-badge">Closed</span>
-                 </div>
-              </div>
-              <div class="p-3 d-flex flex-column flex-grow-1">
-                <h5 class="fw-bold text-light mb-1">{{ event.name }}</h5>
-                <p class="text-secondary small mb-2 flex-grow-1">{{ event.description }}</p>
-                <div class="text-secondary small mb-2"><i class="bi bi-geo-alt-fill me-1"></i>{{ formatVenue(event.venue) }}</div>
-                <div v-if="store.registeredEvents.includes(event.id)" class="d-flex align-items-center gap-2 mt-2">
-                  <button class="btn-dashboard-primary btn-sm flex-grow-1" disabled>
+
+        <div v-if="displayedBrowseEvents.length > 0" class="row g-3">
+          <div v-for="event in displayedBrowseEvents" :key="event.id" class="col-xl-4 col-md-6">
+            <div class="card-glass p-0 h-100 d-flex flex-column event-card-hover overflow-hidden" @click="openEventDetails(event)" style="cursor: pointer;">
+              <div class="event-card-img-sm position-relative" :style="{ backgroundImage: `url(${event.image || event.cover_image_url || 'https://images.unsplash.com/photo-1553408227-108e3f4edef1?w=600&h=400&fit=crop'})` }">
+                <div class="event-card-top-bar">
+                  <span class="event-date-pill"><i class="bi bi-calendar3"></i>{{ formatDate(event.date || event.event_date) }}</span>
+                  <span v-if="store.registeredEvents.includes(event.id)" class="event-status-pill registered">
                     <i class="bi bi-check-circle-fill me-1"></i>Registered
+                  </span>
+                  <span v-else-if="isEventOver(event)" class="event-status-pill closed">Closed</span>
+                  <span v-else class="event-status-pill open">Open</span>
+                </div>
+              </div>
+
+              <div class="p-3 d-flex flex-column flex-grow-1">
+                <h6 class="fw-bold text-light mb-1" style="font-size: 0.95rem;">{{ event.name }}</h6>
+                <p class="text-secondary small mb-2 flex-grow-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.8rem; line-height: 1.45; min-height: 2.3em;">
+                  {{ event.short_description || event.description }}
+                </p>
+                <div class="event-meta mb-2">
+                  <span><i class="bi bi-geo-alt-fill me-1"></i>{{ formatVenue(event.venue) }}</span>
+                  <span><i class="bi bi-people-fill me-1"></i>{{ event.participants || event.max_participants || 50 }} Max</span>
+                </div>
+                <div class="event-card-actions">
+                  <button
+                    v-if="store.registeredEvents.includes(event.id)"
+                    class="btn-dashboard-primary btn-sm flex-grow-1"
+                    style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(52, 211, 153, 0.4); color: #34d399;"
+                    @click.stop="openEventDetails(event)"
+                  >
+                    <i class="bi bi-ticket-perforated-fill me-1"></i>Registered &bull; Details
                   </button>
-                  <button class="btn-calendar-sm" title="Add to Calendar" @click.stop="openCalendarForEvent(event)">
+                  <button
+                    v-else-if="isEventOver(event)"
+                    class="btn-dashboard-primary btn-sm flex-grow-1"
+                    style="opacity: 0.6; cursor: default;"
+                    @click.stop="openEventDetails(event)"
+                  >
+                    Registration Closed
+                  </button>
+                  <button
+                    v-else
+                    class="btn-dashboard-primary btn-sm flex-grow-1"
+                    @click.stop="openEventDetails(event)"
+                  >
+                    <i class="bi bi-eye me-1"></i>View Details & Register
+                  </button>
+
+                  <button
+                    v-if="store.registeredEvents.includes(event.id) || !isEventOver(event)"
+                    class="btn-calendar-admin"
+                    title="Add to Calendar"
+                    @click.stop="openCalendarForEvent(event)"
+                  >
                     <i class="bi bi-calendar-plus"></i>
-                   </button>
-                 </div>
-                <button v-else class="btn-dashboard-primary btn-sm mt-2" @click.stop="openEventDetails(event)">
-                  View Details
-                </button>
-               </div>
-             </div>
-           </div>
-         </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="card-glass p-5 text-center d-flex flex-column align-items-center justify-content-center">
+          <i class="bi bi-ticket-perforated text-secondary mb-2" style="font-size: 2.2rem;"></i>
+          <h5 class="text-light fw-bold mb-1">
+            {{ studentEventFilter === 'registered' ? 'No Registered Events Yet' : 'No Events Available' }}
+          </h5>
+          <p class="text-secondary small mb-3">
+            {{ studentEventFilter === 'registered' ? 'You have not registered for any events yet. Switch to "All Events" to explore and register!' : 'No upcoming events found.' }}
+          </p>
+          <button v-if="studentEventFilter === 'registered'" class="btn-primary-premium btn-sm" @click="studentEventFilter = 'all'">
+            <i class="bi bi-compass me-1"></i>Explore All Events
+          </button>
+        </div>
       </div>
 
-      <div v-else-if="currentTab === 'passes'" class="pt-3">
+      <div v-else-if="currentTab === 'passes'">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <div>
             <h5 class="fw-bold m-0 text-light">My Event Passes</h5>
@@ -205,7 +282,7 @@
          </div>
       </div>
  
-      <div v-else-if="currentTab === 'volunteering'" class="pt-3">
+      <div v-else-if="currentTab === 'volunteering'">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <div>
             <h5 class="fw-bold m-0 text-light">My Volunteering</h5>
@@ -215,7 +292,7 @@
         <VolunteerView :applications="assignedVolunteerWork" @browse-events="currentTab = 'events'" />
       </div>
 
-      <div v-else-if="currentTab === 'certificates'" class="pt-3">
+      <div v-else-if="currentTab === 'certificates'">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <div>
             <h5 class="fw-bold m-0 text-light">My Certificates</h5>
@@ -280,12 +357,12 @@
         />
       </div>
 
-      <div v-else-if="currentTab === 'support'" class="pt-3">
+      <div v-else-if="currentTab === 'support'">
         <SupportDeskDiscussionHub :is-admin="false" />
       </div>
 
-      <div v-else-if="currentTab === 'bounties'" class="pt-3">
-        <CampusBountyStudent />
+      <div v-else-if="currentTab === 'bounties'">
+        <CampusBountyStudent @navigate="currentTab = $event" />
       </div>
 
       <div v-else-if="currentTab === 'notifications'" class="notifications-page">
@@ -457,13 +534,18 @@ const loadMyRegistrations = async () => {
       const list = await getMyEventRegistrationsApi(token);
       if (Array.isArray(list)) {
         liveRegistrations.value = list;
-        list.forEach(r => {
-          if (!store.registeredEvents.includes(r.event_id)) {
-            store.registeredEvents.push(r.event_id);
-          }
-        });
+        store.registeredEvents = list.map(r => r.event_id);
+      } else {
+        liveRegistrations.value = [];
+        store.registeredEvents = [];
       }
-    } catch {}
+    } catch {
+      liveRegistrations.value = [];
+      store.registeredEvents = [];
+    }
+  } else {
+    liveRegistrations.value = [];
+    store.registeredEvents = [];
   }
 };
 
@@ -496,7 +578,7 @@ const registeredEventsList = computed(() => {
       };
     });
   }
-  return store.events.filter(e => store.registeredEvents.includes(e.id));
+  return [];
 });
 const filteredCerts = computed(() => {
   let result = [...store.certificates];
@@ -534,6 +616,12 @@ const navItems = computed(() => [
 ]);
 
 const currentTab = ref('dashboard');
+const currentTabLabel = computed(() => {
+  const item = navItems.value.find(i => i.key === currentTab.value);
+  if (item) return item.label;
+  if (currentTab.value === 'notifications') return 'Notifications';
+  return 'Dashboard';
+});
 const goToNotifications = () => {
   currentTab.value = 'notifications';
 };
@@ -543,6 +631,18 @@ const selectedEvent = ref(null);
 
 const approvedEvents = computed(() => store.events.filter(e => e.status === 'Approved'));
 const ongoingEvents = computed(() => approvedEvents.value);
+
+const studentEventFilter = ref('all'); // 'all' | 'registered'
+const myRegisteredCount = computed(() => {
+  return approvedEvents.value.filter(e => (store.registeredEvents || []).includes(e.id)).length;
+});
+const displayedBrowseEvents = computed(() => {
+  let list = approvedEvents.value;
+  if (studentEventFilter.value === 'registered') {
+    return list.filter(e => (store.registeredEvents || []).includes(e.id));
+  }
+  return list;
+});
 
 const assignedVolunteerWork = computed(() =>
   store.volunteerApplications.filter(a => a.assignedTask && (a.status === 'accepted' || a.status === 'completed'))
@@ -612,28 +712,33 @@ const refreshTickets = () => {};
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: #0c1220;
+  background-color: #0c1220;
+  background-image:
+    radial-gradient(ellipse 900px 700px at 85% 12%, rgba(124, 58, 237, 0.08) 0%, rgba(99, 102, 241, 0.03) 45%, transparent 70%),
+    radial-gradient(ellipse 750px 600px at 15% 88%, rgba(99, 102, 241, 0.07) 0%, rgba(139, 92, 246, 0.02) 50%, transparent 70%),
+    radial-gradient(ellipse 600px 450px at 20% 8%, rgba(139, 92, 246, 0.05) 0%, transparent 60%);
 }
 .std-glow {
   position: absolute;
   border-radius: 50%;
-  filter: blur(100px);
-  animation: stdGlowDrift 25s ease-in-out infinite;
+  filter: blur(140px);
+  animation: stdGlowDrift 28s ease-in-out infinite;
+  pointer-events: none;
 }
 .glow-1 {
-  width: 500px; height: 500px;
-  top: -15%; left: -8%;
-  background: radial-gradient(circle, rgba(109,93,246,0.1) 0%, transparent 70%);
+  width: 600px; height: 600px;
+  top: -10%; left: -5%;
+  background: radial-gradient(circle, rgba(109, 93, 246, 0.09) 0%, rgba(99, 102, 241, 0.03) 50%, transparent 70%);
 }
 .glow-2 {
-  width: 400px; height: 400px;
-  bottom: -10%; right: -5%;
-  background: radial-gradient(circle, rgba(52,211,153,0.07) 0%, transparent 70%);
-  animation-delay: -12s;
+  width: 550px; height: 550px;
+  top: 10%; right: -8%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, rgba(124, 58, 237, 0.02) 50%, transparent 70%);
+  animation-delay: -14s;
 }
 @keyframes stdGlowDrift {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(40px, -30px) scale(1.05); }
+  50% { transform: translate(30px, -20px) scale(1.04); }
 }
 
 .std-wrapper {
@@ -650,10 +755,8 @@ const refreshTickets = () => {};
   align-items: center;
   padding: 0 2rem;
   height: 56px;
-  background: rgba(12, 18, 32, 0.85);
+  background: #0b111f;
   border-bottom: 1px solid rgba(255,255,255,0.07);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -759,7 +862,7 @@ const refreshTickets = () => {};
 .std-main {
   position: relative;
   z-index: 2;
-  padding: 0 2rem 3rem;
+  padding: 1.5rem 2rem 3rem;
   margin-left: 0;
 }
 
@@ -1162,5 +1265,139 @@ const refreshTickets = () => {};
   z-index: 1;
   flex: 1 1 300px;
   max-width: 100%;
+}
+
+/* ── Browse Events Filter & Card Styles (Same as ClubAdminView) ── */
+.std-event-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.std-event-filter-pill:hover {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(129, 140, 248, 0.35);
+  color: #e2e8f0;
+  transform: translateY(-1px);
+}
+.std-event-filter-pill.active {
+  background: rgba(99, 102, 241, 0.22);
+  border-color: #818cf8;
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.25);
+}
+.std-event-filter-pill.registered.active {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #34d399;
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.25);
+}
+.std-filter-count {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+}
+.std-event-filter-pill.active .std-filter-count {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.event-card-top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  background: linear-gradient(180deg, rgba(7, 11, 20, 0.7) 0%, rgba(7, 11, 20, 0.1) 85%, transparent 100%);
+  z-index: 2;
+}
+.event-date-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(15, 23, 42, 0.75);
+  color: #c7d2fe;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.event-status-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.event-status-pill.approved,
+.event-status-pill.registered,
+.event-status-pill.open {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+}
+.event-status-pill.pending {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+.event-status-pill.rejected,
+.event-status-pill.closed {
+  background: rgba(244, 63, 94, 0.2);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+.event-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.25rem;
+}
+.btn-calendar-admin {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(129,140,248,0.25);
+  background: rgba(129,140,248,0.1);
+  color: #a5b4fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.btn-calendar-admin:hover {
+  background: rgba(129,140,248,0.25);
+  border-color: #818cf8;
+  color: #ffffff;
+  transform: scale(1.05);
 }
 </style>

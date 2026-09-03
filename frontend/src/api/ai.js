@@ -63,3 +63,16 @@ export async function analyzeApplicationApi(applicationId, token) {
   }
   return data;
 }
+
+export async function suggestEventDetailsApi(eventInfo, token) {
+  const res = await fetch(`${API_BASE}/ai/events/suggest-details`, {
+    method: 'POST',
+    headers: getHeaders(token),
+    body: JSON.stringify(eventInfo)
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(extractErrorMessage(data, `Details suggestion failed (${res.status})`));
+  }
+  return data;
+}
